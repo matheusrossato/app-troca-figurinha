@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { CapturedImage } from '../lib/camera'
-import { recognizeStickerIds, type OcrResult } from '../lib/ocr'
-import { STICKERS_BY_ID } from '../data/album'
+import { recognizeStickerIds, type DetectedId } from '../lib/ocr'
+import { isGeminiConfigured, recognizeWithGemini } from '../lib/gemini'
+import { STICKERS_BY_ID, TEAMS_BY_CODE } from '../data/album'
 import { bulkAdd } from '../db'
 
 interface LocationState {
   capture?: CapturedImage
+}
+
+interface RecognitionResult {
+  ids: DetectedId[]
+  filledIds: Set<string>
+  rawText: string
+  durationMs: number
+  source: 'gemini' | 'tesseract'
+  team: string | null
+  page: number | null
 }
 
 type Status = 'running' | 'done' | 'error'
@@ -19,7 +30,7 @@ export default function Review() {
 
   const [status, setStatus] = useState<Status>('running')
   const [progress, setProgress] = useState(0)
-  const [result, setResult] = useState<OcrResult | null>(null)
+  const [result, setResult] = useState<RecognitionResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
@@ -28,11 +39,19 @@ export default function Review() {
     let cancelled = false
     setStatus('running')
     setProgress(0)
-    recognizeStickerIds(capture.blob, (p) => !cancelled && setProgress(p))
+
+    runRecognition(capture.blob, (p) => !cancelled && setProgress(p))
       .then((r) => {
         if (cancelled) return
         setResult(r)
-        setSelected(new Set(r.ids.map((d) => d.id)))
+        // Gemini retorna `filled=true` para figurinhas coladas na foto.
+        // Pré-selecionamos essas — são exatamente as que o usuário tem.
+        // Se for fallback Tesseract, marcamos tudo (não distingue).
+        const initial =
+          r.source === 'gemini' && r.filledIds.size > 0
+            ? new Set(r.filledIds)
+            : new Set(r.ids.map((d) => d.id))
+        setSelected(initial)
         setStatus('done')
       })
       .catch((err: Error) => {
@@ -40,6 +59,7 @@ export default function Review() {
         setErrorMsg(err.message)
         setStatus('error')
       })
+
     return () => {
       cancelled = true
     }
@@ -83,13 +103,11 @@ export default function Review() {
         <img src={capture.dataUrl} alt="captura" className="block w-full" />
       </div>
 
-      {status === 'running' && (
-        <ProgressBox progress={progress} />
-      )}
+      {status === 'running' && <ProgressBox progress={progress} />}
 
       {status === 'error' && (
         <div className="rounded-xl border border-red-900 bg-red-950/30 px-4 py-3 text-sm text-red-300">
-          Falha no OCR: {errorMsg}
+          Falha no reconhecimento: {errorMsg}
         </div>
       )}
 
@@ -103,6 +121,41 @@ export default function Review() {
       )}
     </div>
   )
+}
+
+async function runRecognition(
+  blob: Blob,
+  onProgress: (p: number) => void,
+): Promise<RecognitionResult> {
+  if (isGeminiConfigured()) {
+    try {
+      onProgress(0.1)
+      const r = await recognizeWithGemini(blob)
+      onProgress(1)
+      return {
+        ids: r.ids,
+        filledIds: r.filledIds,
+        rawText: r.rawText,
+        durationMs: r.durationMs,
+        source: 'gemini',
+        team: r.team,
+        page: r.page,
+      }
+    } catch (err) {
+      console.warn('gemini failed, falling back to tesseract', err)
+    }
+  }
+
+  const r = await recognizeStickerIds(blob, onProgress)
+  return {
+    ids: r.ids,
+    filledIds: new Set(),
+    rawText: r.rawText,
+    durationMs: r.durationMs,
+    source: 'tesseract',
+    team: null,
+    page: null,
+  }
 }
 
 function ProgressBox({ progress }: { progress: number }) {
@@ -127,7 +180,7 @@ function ResultPanel({
   onToggle,
   onConfirm,
 }: {
-  result: OcrResult
+  result: RecognitionResult
   selected: Set<string>
   onToggle: (id: string) => void
   onConfirm: () => void
@@ -149,16 +202,38 @@ function ResultPanel({
     )
   }
 
+  const teamName = result.team ? TEAMS_BY_CODE.get(result.team)?.name : null
+
   return (
     <div className="space-y-3">
-      <div className="text-xs text-neutral-500">
-        {result.ids.length} detectada{result.ids.length === 1 ? '' : 's'} · {result.passes} passe{result.passes === 1 ? '' : 's'} · conf {Math.round(result.confidence)}% · {Math.round(result.durationMs)}ms
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-neutral-500">
+        <span>
+          {result.ids.length} detectada{result.ids.length === 1 ? '' : 's'}
+        </span>
+        {result.source === 'gemini' && result.filledIds.size > 0 && (
+          <span className="text-emerald-400">
+            {result.filledIds.size} colada{result.filledIds.size === 1 ? '' : 's'}
+          </span>
+        )}
+        {teamName && <span className="text-neutral-300">{teamName}</span>}
+        {result.page && <span>p. {result.page}</span>}
+        <span>·</span>
+        <span>{result.source === 'gemini' ? 'Gemini' : 'Tesseract'}</span>
+        <span>{Math.round(result.durationMs)}ms</span>
       </div>
+
+      {result.source === 'gemini' && (
+        <p className="rounded-lg border border-neutral-800 bg-neutral-900/30 px-3 py-2 text-xs text-neutral-400">
+          Pré-selecionei as figurinhas que aparecem coladas na foto. Toque para
+          ajustar antes de salvar.
+        </p>
+      )}
 
       <ul className="grid grid-cols-2 gap-2">
         {result.ids.map((d) => {
           const sticker = STICKERS_BY_ID.get(d.id)
           const isOn = selected.has(d.id)
+          const isFilled = result.filledIds.has(d.id)
           return (
             <li key={d.id}>
               <button
@@ -169,7 +244,18 @@ function ResultPanel({
                     : 'border-neutral-800 bg-neutral-900/50 text-neutral-400'
                 }`}
               >
-                <div className="font-mono text-sm font-semibold">{d.id}</div>
+                <div className="flex items-center gap-2 font-mono text-sm font-semibold">
+                  <span>{d.id}</span>
+                  {result.source === 'gemini' && (
+                    <span
+                      className={`ml-auto text-[10px] uppercase tracking-wide ${
+                        isFilled ? 'text-emerald-400' : 'text-neutral-600'
+                      }`}
+                    >
+                      {isFilled ? 'colada' : 'vazio'}
+                    </span>
+                  )}
+                </div>
                 <div className="truncate text-xs text-neutral-500">
                   {sticker?.label ?? '—'}
                 </div>
@@ -192,11 +278,11 @@ function ResultPanel({
   )
 }
 
-function DebugRaw({ result }: { result: OcrResult }) {
+function DebugRaw({ result }: { result: RecognitionResult }) {
   return (
     <details className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-3 text-xs">
       <summary className="cursor-pointer text-neutral-400">
-        Debug: o que o OCR leu (toque pra expandir)
+        Debug ({result.source}): toque pra expandir
       </summary>
       <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-tight text-neutral-500">
         {result.rawText.trim() || '(vazio)'}
