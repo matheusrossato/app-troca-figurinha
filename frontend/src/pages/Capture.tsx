@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   type CaptureMode,
+  type CapturedImage,
   captureFrame,
   startRearCamera,
   stopStream,
@@ -13,7 +14,7 @@ import {
   measureSharpness,
 } from '../lib/blur-detection'
 
-type Status = 'starting' | 'live' | 'capturing' | 'denied' | 'error'
+type Status = 'starting' | 'live' | 'capturing' | 'preview' | 'denied' | 'error'
 
 const ANALYSIS_INTERVAL_MS = 100
 
@@ -28,6 +29,7 @@ export default function Capture() {
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [mode, setMode] = useState<CaptureMode>('page')
   const [autoCapture, setAutoCapture] = useState<boolean>(true)
+  const [preview, setPreview] = useState<CapturedImage | null>(null)
   const [focus, setFocus] = useState<FocusState>({
     raw: 0,
     smoothed: 0,
@@ -108,12 +110,33 @@ export default function Capture() {
       } catch {
         /* opcional */
       }
-      navigate('/review', { state: { capture: shot, mode } })
+      // Não vai direto pro Gemini — mostra preview antes pra usuário aprovar.
+      setPreview(shot)
+      setStatus('preview')
     } catch (err) {
       const e = err as Error
       setStatus('error')
       setErrorMsg(e.message)
     }
+  }
+
+  async function handleRetake() {
+    if (!videoRef.current) return
+    setPreview(null)
+    setStatus('starting')
+    try {
+      const stream = await startRearCamera(videoRef.current)
+      streamRef.current = stream
+      setStatus('live')
+    } catch (err) {
+      setStatus('error')
+      setErrorMsg((err as Error).message || 'Falha ao reiniciar câmera.')
+    }
+  }
+
+  function handleSubmit() {
+    if (!preview) return
+    navigate('/review', { state: { capture: preview, mode } })
   }
 
   if (status === 'denied') {
@@ -134,6 +157,46 @@ export default function Capture() {
         <h2 className="text-base font-semibold text-red-300">Erro</h2>
         <p className="mt-2 text-sm text-neutral-400">{errorMsg}</p>
       </Box>
+    )
+  }
+
+  if (status === 'preview' && preview) {
+    return (
+      <div className="-mx-4 -my-4 flex h-[calc(100vh-3.25rem-3.25rem)] flex-col bg-black">
+        <div className="relative flex-1 overflow-hidden">
+          <img
+            src={preview.dataUrl}
+            alt="captura"
+            className="absolute inset-0 h-full w-full object-contain"
+          />
+        </div>
+
+        <div className="space-y-2.5 border-t border-neutral-900 bg-[#0a0a0f] px-4 pt-3 pb-4">
+          <div className="text-center text-xs text-neutral-400">
+            {mode === 'page' ? 'Página do álbum' : 'Repetidas (verso)'}
+            <span className="mx-2 text-neutral-700">·</span>
+            {preview.width}×{preview.height}
+            <span className="mx-2 text-neutral-700">·</span>
+            {(preview.blob.size / 1024).toFixed(0)} KB
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleRetake}
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3 font-semibold text-neutral-200 transition active:scale-[0.99]"
+            >
+              Refazer foto
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="bg-fwc-rainbow shadow-gold-glow rounded-2xl p-[2px] transition active:scale-[0.99]"
+            >
+              <div className="rounded-[14px] bg-[#0a0a0f] px-4 py-3 text-center">
+                <span className="text-sm font-bold text-white">Enviar →</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
     )
   }
 

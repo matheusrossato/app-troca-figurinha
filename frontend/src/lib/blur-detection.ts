@@ -80,12 +80,14 @@ export interface FocusState {
   stable: boolean
 }
 
-/** Mantém média móvel + flag de estabilidade pra auto-captura. */
+/** Mantém média móvel + flag de estabilidade pra auto-captura.
+ *  Defaults calibrados pra dar tempo do autofoco do celular trabalhar
+ *  antes de disparar (1.2s consecutivos com smoothed >= 180). */
 export function createFocusTracker({
-  windowSize = 6,
-  sharpThreshold = 130,
-  okThreshold = 70,
-  stableFrames = 5,
+  windowSize = 8,
+  sharpThreshold = 180,
+  okThreshold = 90,
+  stableFrames = 12,
 }: {
   windowSize?: number
   sharpThreshold?: number
