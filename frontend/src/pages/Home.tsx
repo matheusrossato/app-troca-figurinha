@@ -29,6 +29,23 @@ export default function Home() {
           números das figurinhas presentes.
         </p>
       )}
+
+      <VersionBadge />
+    </div>
+  )
+}
+
+function VersionBadge() {
+  const built = new Date(__APP_BUILD_TIME__)
+  const builtLabel = built.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  return (
+    <div className="pt-6 text-center text-[11px] text-neutral-600">
+      v{__APP_VERSION__} · build {builtLabel}
     </div>
   )
 }

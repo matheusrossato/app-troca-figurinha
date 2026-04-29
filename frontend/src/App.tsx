@@ -1,11 +1,19 @@
+import { useEffect } from 'react'
 import { Routes, Route, NavLink, Link } from 'react-router-dom'
 import Home from './pages/Home'
 import Capture from './pages/Capture'
 import Collection from './pages/Collection'
 import Review from './pages/Review'
 import Settings from './pages/Settings'
+import { prewarmBackend } from './lib/gemini'
 
 export default function App() {
+  // Esquenta a Cloud Run no boot pra mascarar o cold start (~3-5s)
+  // antes da primeira foto. Best-effort; falhas são silenciosas.
+  useEffect(() => {
+    prewarmBackend()
+  }, [])
+
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-800 bg-neutral-950/95 px-4 py-3 backdrop-blur">

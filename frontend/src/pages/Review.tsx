@@ -32,6 +32,7 @@ export default function Review() {
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<RecognitionResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
+  const [geminiError, setGeminiError] = useState<string>('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -40,7 +41,11 @@ export default function Review() {
     setStatus('running')
     setProgress(0)
 
-    runRecognition(capture.blob, (p) => !cancelled && setProgress(p))
+    runRecognition(
+      capture.blob,
+      (p) => !cancelled && setProgress(p),
+      (err) => !cancelled && setGeminiError(err),
+    )
       .then((r) => {
         if (cancelled) return
         setResult(r)
@@ -117,6 +122,7 @@ export default function Review() {
           selected={selected}
           onToggle={toggle}
           onConfirm={handleConfirm}
+          geminiError={geminiError}
         />
       )}
     </div>
@@ -126,11 +132,12 @@ export default function Review() {
 async function runRecognition(
   blob: Blob,
   onProgress: (p: number) => void,
+  onGeminiError: (msg: string) => void,
 ): Promise<RecognitionResult> {
   if (isGeminiConfigured()) {
     try {
-      onProgress(0.1)
-      const r = await recognizeWithGemini(blob)
+      onProgress(0.05)
+      const r = await recognizeWithGemini(blob, ({ progress }) => onProgress(progress))
       onProgress(1)
       return {
         ids: r.ids,
@@ -142,7 +149,9 @@ async function runRecognition(
         page: r.page,
       }
     } catch (err) {
+      const msg = (err as Error).message || String(err)
       console.warn('gemini failed, falling back to tesseract', err)
+      onGeminiError(msg)
     }
   }
 
@@ -179,18 +188,26 @@ function ResultPanel({
   selected,
   onToggle,
   onConfirm,
+  geminiError,
 }: {
   result: RecognitionResult
   selected: Set<string>
   onToggle: (id: string) => void
   onConfirm: () => void
+  geminiError?: string
 }) {
   if (result.ids.length === 0) {
     return (
       <div className="space-y-3">
         <div className="rounded-xl border border-amber-900 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
-          Nenhum código detectado. Tente refazer a foto com mais luz e enquadramento da página inteira.
+          Nenhum código detectado. Fonte: <strong>{result.source}</strong>. Tente refazer a foto com mais luz e enquadramento da página inteira.
         </div>
+        {geminiError && (
+          <div className="rounded-xl border border-red-900 bg-red-950/20 px-4 py-3 text-xs text-red-300">
+            <div className="font-semibold text-red-200">Gemini falhou, caiu no Tesseract:</div>
+            <div className="mt-1 break-words">{geminiError}</div>
+          </div>
+        )}
         <DebugRaw result={result} />
         <Link
           to="/capture"

@@ -85,6 +85,14 @@ function checkToken(req, res) {
   return true
 }
 
+function parseGeminiJson(text) {
+  const cleaned = text
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```\s*$/, '')
+    .trim()
+  return JSON.parse(cleaned)
+}
+
 app.post('/recognize', async (req, res) => {
   if (!checkToken(req, res)) return
 
@@ -105,11 +113,7 @@ app.post('/recognize', async (req, res) => {
     const text = result.response.text()
     let parsed
     try {
-      const cleaned = text
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/```\s*$/, '')
-        .trim()
-      parsed = JSON.parse(cleaned)
+      parsed = parseGeminiJson(text)
     } catch (parseErr) {
       console.warn('failed to parse gemini output', parseErr.message)
       return res.status(502).json({ error: 'gemini returned non-JSON', rawText: text })
@@ -123,6 +127,65 @@ app.post('/recognize', async (req, res) => {
   } catch (err) {
     console.error('gemini error', err)
     res.status(500).json({ error: err?.message || 'gemini error' })
+  }
+})
+
+// Streaming endpoint — devolve chunks de texto crus enquanto Gemini gera,
+// terminando com uma linha `__DONE__` seguida do JSON final consolidado.
+// Frontend mostra a barra de progresso baseada em bytes recebidos.
+app.post('/recognize-stream', async (req, res) => {
+  if (!checkToken(req, res)) return
+
+  const { imageBase64, mimeType } = req.body || {}
+  if (!imageBase64 || typeof imageBase64 !== 'string') {
+    return res.status(400).json({ error: 'imageBase64 (base64 string) required' })
+  }
+  if (imageBase64.length > 12 * 1024 * 1024) {
+    return res.status(413).json({ error: 'image too large' })
+  }
+
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
+  res.setHeader('X-Accel-Buffering', 'no')
+  // dispara cabeçalhos imediatamente pra navegador começar a ler
+  res.flushHeaders?.()
+
+  const start = Date.now()
+  let raw = ''
+  try {
+    const stream = await model.generateContentStream([
+      PROMPT,
+      { inlineData: { data: imageBase64, mimeType: mimeType || 'image/jpeg' } },
+    ])
+    for await (const chunk of stream.stream) {
+      const piece = chunk.text()
+      raw += piece
+      res.write(piece)
+    }
+    let parsed = null
+    try {
+      parsed = parseGeminiJson(raw)
+    } catch {
+      // Mantém raw para o cliente ver / debugar.
+    }
+    const trailer = JSON.stringify({
+      done: true,
+      durationMs: Date.now() - start,
+      parsed: parsed
+        ? {
+            ids: Array.isArray(parsed.ids) ? parsed.ids : [],
+            team: parsed.team ?? null,
+            page: parsed.page ?? null,
+          }
+        : null,
+    })
+    res.write(`\n__DONE__${trailer}\n`)
+    res.end()
+  } catch (err) {
+    console.error('gemini stream error', err)
+    const errPayload = JSON.stringify({ done: true, error: err?.message || 'gemini error' })
+    res.write(`\n__DONE__${errPayload}\n`)
+    res.end()
   }
 })
 
