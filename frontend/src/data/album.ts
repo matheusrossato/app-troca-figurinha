@@ -43,12 +43,14 @@ export interface Sticker {
 }
 
 export interface Team {
-  /** Código FIFA de 3 letras. */
+  /** Código de 3 letras usado no álbum Panini 2026. */
   code: string
   /** Nome em português. */
   name: string
-  /** Grupo da Copa (A..L), opcional até o sorteio definitivo. */
-  group?: string
+  /** Grupo da Copa (A..L). */
+  group: string
+  /** Página onde a seleção começa no álbum impresso (cada seleção ocupa 2 páginas). */
+  startPage: number
 }
 
 /**
@@ -60,70 +62,76 @@ export const INTRO_CODE = 'FWC'
 export const MUSEUM_CODE = 'FM'
 
 /**
- * Ordem provisória das 48 seleções classificadas para a Copa 2026.
- * Usada para gerar IDs e relacionar figurinhas a páginas. Será reordenada
- * quando soubermos a sequência real do álbum impresso (foto do sumário).
+ * Lista oficial das 48 seleções na ordem do álbum impresso, agrupadas
+ * em A..L (4 por grupo). Ordem e códigos confirmados a partir do índice
+ * fotografado pelo usuário em 2026-04-28.
  *
- * Anfitriões primeiro (México, Canadá, EUA), depois ordem alfabética como
- * placeholder seguro. Lista das 48 classificadas baseada em divulgações de
- * abril/2026; ajuste conforme repescagens finais.
+ * Cada seleção ocupa 2 páginas. Há um intervalo entre os grupos F e G
+ * (páginas 56-57 são reservadas para outra coisa — provavelmente seção
+ * intermediária com FWC/Heroes).
  */
 export const TEAMS: Team[] = [
-  // Anfitriões
-  { code: 'MEX', name: 'México' },
-  { code: 'CAN', name: 'Canadá' },
-  { code: 'USA', name: 'Estados Unidos' },
-  // CONMEBOL
-  { code: 'ARG', name: 'Argentina' },
-  { code: 'BRA', name: 'Brasil' },
-  { code: 'COL', name: 'Colômbia' },
-  { code: 'ECU', name: 'Equador' },
-  { code: 'PAR', name: 'Paraguai' },
-  { code: 'URU', name: 'Uruguai' },
-  // UEFA
-  { code: 'AUT', name: 'Áustria' },
-  { code: 'BEL', name: 'Bélgica' },
-  { code: 'CRO', name: 'Croácia' },
-  { code: 'DEN', name: 'Dinamarca' },
-  { code: 'ENG', name: 'Inglaterra' },
-  { code: 'FRA', name: 'França' },
-  { code: 'GER', name: 'Alemanha' },
-  { code: 'NED', name: 'Países Baixos' },
-  { code: 'NOR', name: 'Noruega' },
-  { code: 'POR', name: 'Portugal' },
-  { code: 'SCO', name: 'Escócia' },
-  { code: 'ESP', name: 'Espanha' },
-  { code: 'SUI', name: 'Suíça' },
-  { code: 'TUR', name: 'Turquia' },
-  { code: 'WAL', name: 'País de Gales' },
-  { code: 'CZE', name: 'Tchéquia' },
-  { code: 'POL', name: 'Polônia' },
-  // CAF
-  { code: 'ALG', name: 'Argélia' },
-  { code: 'CPV', name: 'Cabo Verde' },
-  { code: 'CIV', name: 'Costa do Marfim' },
-  { code: 'EGY', name: 'Egito' },
-  { code: 'GHA', name: 'Gana' },
-  { code: 'MAR', name: 'Marrocos' },
-  { code: 'SEN', name: 'Senegal' },
-  { code: 'RSA', name: 'África do Sul' },
-  { code: 'TUN', name: 'Tunísia' },
-  // AFC
-  { code: 'AUS', name: 'Austrália' },
-  { code: 'IRN', name: 'Irã' },
-  { code: 'JPN', name: 'Japão' },
-  { code: 'JOR', name: 'Jordânia' },
-  { code: 'KOR', name: 'Coreia do Sul' },
-  { code: 'KSA', name: 'Arábia Saudita' },
-  { code: 'UZB', name: 'Uzbequistão' },
-  { code: 'QAT', name: 'Catar' },
-  // CONCACAF (além dos anfitriões)
-  { code: 'CRC', name: 'Costa Rica' },
-  { code: 'CUW', name: 'Curaçao' },
-  { code: 'HAI', name: 'Haiti' },
-  { code: 'PAN', name: 'Panamá' },
-  // OFC
-  { code: 'NZL', name: 'Nova Zelândia' },
+  // Grupo A
+  { code: 'MEX', name: 'México', group: 'A', startPage: 8 },
+  { code: 'RSA', name: 'África do Sul', group: 'A', startPage: 10 },
+  { code: 'KOR', name: 'Coreia do Sul', group: 'A', startPage: 12 },
+  { code: 'CZE', name: 'Tchéquia', group: 'A', startPage: 14 },
+  // Grupo B
+  { code: 'CAN', name: 'Canadá', group: 'B', startPage: 16 },
+  { code: 'BIH', name: 'Bósnia e Herzegovina', group: 'B', startPage: 18 },
+  { code: 'QAT', name: 'Catar', group: 'B', startPage: 20 },
+  { code: 'SUI', name: 'Suíça', group: 'B', startPage: 22 },
+  // Grupo C
+  { code: 'BRA', name: 'Brasil', group: 'C', startPage: 24 },
+  { code: 'MAR', name: 'Marrocos', group: 'C', startPage: 26 },
+  { code: 'HAI', name: 'Haiti', group: 'C', startPage: 28 },
+  { code: 'SCO', name: 'Escócia', group: 'C', startPage: 30 },
+  // Grupo D
+  { code: 'USA', name: 'Estados Unidos', group: 'D', startPage: 32 },
+  { code: 'PAR', name: 'Paraguai', group: 'D', startPage: 34 },
+  { code: 'AUS', name: 'Austrália', group: 'D', startPage: 36 },
+  { code: 'TUR', name: 'Turquia', group: 'D', startPage: 38 },
+  // Grupo E
+  { code: 'GER', name: 'Alemanha', group: 'E', startPage: 40 },
+  { code: 'CUW', name: 'Curaçao', group: 'E', startPage: 42 },
+  { code: 'CIV', name: 'Costa do Marfim', group: 'E', startPage: 44 },
+  { code: 'ECU', name: 'Equador', group: 'E', startPage: 46 },
+  // Grupo F
+  { code: 'NED', name: 'Países Baixos', group: 'F', startPage: 48 },
+  { code: 'JPN', name: 'Japão', group: 'F', startPage: 50 },
+  { code: 'SWE', name: 'Suécia', group: 'F', startPage: 52 },
+  { code: 'TUN', name: 'Tunísia', group: 'F', startPage: 54 },
+  // [páginas 56-57 são seção especial entre F e G]
+  // Grupo G
+  { code: 'BEL', name: 'Bélgica', group: 'G', startPage: 58 },
+  { code: 'EGY', name: 'Egito', group: 'G', startPage: 60 },
+  { code: 'IRN', name: 'Irã', group: 'G', startPage: 62 },
+  { code: 'NZL', name: 'Nova Zelândia', group: 'G', startPage: 64 },
+  // Grupo H
+  { code: 'ESP', name: 'Espanha', group: 'H', startPage: 66 },
+  { code: 'CPV', name: 'Cabo Verde', group: 'H', startPage: 68 },
+  { code: 'KSA', name: 'Arábia Saudita', group: 'H', startPage: 70 },
+  { code: 'URU', name: 'Uruguai', group: 'H', startPage: 72 },
+  // Grupo I
+  { code: 'FRA', name: 'França', group: 'I', startPage: 74 },
+  { code: 'SEN', name: 'Senegal', group: 'I', startPage: 76 },
+  { code: 'IRQ', name: 'Iraque', group: 'I', startPage: 78 },
+  { code: 'NOR', name: 'Noruega', group: 'I', startPage: 80 },
+  // Grupo J
+  { code: 'ARG', name: 'Argentina', group: 'J', startPage: 82 },
+  { code: 'ALG', name: 'Argélia', group: 'J', startPage: 84 },
+  { code: 'AUT', name: 'Áustria', group: 'J', startPage: 86 },
+  { code: 'JOR', name: 'Jordânia', group: 'J', startPage: 88 },
+  // Grupo K
+  { code: 'POR', name: 'Portugal', group: 'K', startPage: 90 },
+  { code: 'COD', name: 'Congo (RD)', group: 'K', startPage: 92 },
+  { code: 'UZB', name: 'Uzbequistão', group: 'K', startPage: 94 },
+  { code: 'COL', name: 'Colômbia', group: 'K', startPage: 96 },
+  // Grupo L
+  { code: 'ENG', name: 'Inglaterra', group: 'L', startPage: 98 },
+  { code: 'CRO', name: 'Croácia', group: 'L', startPage: 100 },
+  { code: 'GHA', name: 'Gana', group: 'L', startPage: 102 },
+  { code: 'PAN', name: 'Panamá', group: 'L', startPage: 104 },
 ]
 
 if (TEAMS.length !== TEAM_COUNT) {
