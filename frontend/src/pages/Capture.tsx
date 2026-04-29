@@ -76,7 +76,12 @@ export default function Capture() {
 
   useEffect(() => {
     if (status !== 'live') return
+    // Reseta tracker E estado React do foco. Sem o reset do estado, após
+    // "Refazer foto" o focus.stable=true (resíduo da captura anterior)
+    // dispara o useEffect de auto-captura no instante em que volta pra
+    // 'live', sem dar tempo de re-enquadrar.
     trackerRef.current.reset()
+    setFocus({ raw: 0, smoothed: 0, quality: 'searching', stable: false })
     const id = window.setInterval(() => {
       if (!videoRef.current) return
       const sharpness = measureSharpness(videoRef.current)
