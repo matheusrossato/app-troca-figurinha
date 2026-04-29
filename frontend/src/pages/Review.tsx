@@ -4,8 +4,10 @@ import type { CapturedImage, CaptureMode } from '../lib/camera'
 import { recognizeStickerIds, type DetectedId } from '../lib/ocr'
 import { isGeminiConfigured, recognizeWithGemini } from '../lib/gemini'
 import {
-  INTRO_CODE,
-  INTRO_IDS_BY_PAGE,
+  CC_CODE,
+  CC_IDS_BY_PAGE,
+  FWC_CODE,
+  FWC_IDS_BY_PAGE,
   STICKERS_BY_ID,
   STICKERS_PER_TEAM,
   TEAMS_BY_CODE,
@@ -260,12 +262,14 @@ function expandExpectedIds(
     for (let i = 1; i <= STICKERS_PER_TEAM; i++) set.add(`${team}${i}`)
   }
 
-  // Páginas da seção Intro são heterogêneas (cada uma tem um subset
-  // diferente). Se Gemini detectou alguma FWC E retornou uma página,
-  // usa o INTRO_IDS_BY_PAGE pra preencher os esperados daquela página.
-  if (page != null && detected.some((d) => d.id.startsWith(INTRO_CODE))) {
-    const ids = INTRO_IDS_BY_PAGE.get(page)
-    if (ids) ids.forEach((id) => set.add(id))
+  // FWC (intro + Museum) e Coca-Cola são heterogêneas: cada página tem
+  // um subset diferente. Se Gemini detectou e retornou a página, usamos
+  // o mapa por página pra preencher os esperados daquela página.
+  if (page != null && detected.some((d) => d.id.startsWith(FWC_CODE))) {
+    FWC_IDS_BY_PAGE.get(page)?.forEach((id) => set.add(id))
+  }
+  if (page != null && detected.some((d) => d.id.startsWith(CC_CODE))) {
+    CC_IDS_BY_PAGE.get(page)?.forEach((id) => set.add(id))
   }
 
   return Array.from(set).sort((a, b) => {

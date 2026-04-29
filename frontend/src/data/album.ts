@@ -1,41 +1,39 @@
 /**
  * Modelo de dados do álbum Panini FIFA World Cup 2026.
  *
- * Estrutura matemática (980 = 9 + 11 + 48 × 20):
- *   - 9 figurinhas Introduction (especiais)
- *   - 11 figurinhas FIFA Museum / campeões passados (especiais)
- *   - 48 seleções, 20 figurinhas cada:
+ * Estrutura confirmada com o álbum em mãos (2026-04-29):
+ *   - 19 figurinhas FWC (intro + FIFA Museum/History)
+ *       · pág 1-3: 8 da introdução (taça, mascotes, slogan, Trionda, taças coloridas)
+ *       · pág 106-109: 11 do FIFA Museum (1 por Copa, mas só 11 de 22 Copas
+ *         viraram figurinha — as outras fotos com hologram são decoração fixa)
+ *   - 14 figurinhas Coca-Cola (CC1-CC14)
+ *       · pág 112-113: jogadores patrocinados pela Coca-Cola
+ *
+ * Páginas sem figurinhas (só impresso): 4-7 (sumário), 56-57 (intervalo F-G),
+ * 110-111 ("Road to FIFA World Cup 2026" — eliminatórias).
+ *   - 48 seleções, 20 figurinhas cada (960 figurinhas):
  *       · 1 escudo metalizado (especial)
- *       · 1 foto da equipe
+ *       · 1 foto da equipe (slot 13)
  *       · 18 jogadores
  *
- * Total de especiais: 9 + 11 + 48 = 68 ✓
+ * Total: 19 + 14 + 960 = 993 figurinhas, em até 113 páginas (incl. contracapa).
  *
- * IDs no formato Panini: <CODE><N>, ex: "BRA7", "FWC3", "FM11", "ARG17".
- * - CODE: prefixo de 3 letras (FIFA country code) ou prefixo de seção especial.
- * - N: 1-based dentro do conjunto.
- *
- * A ordem das seleções e a numeração página-a-página NÃO foram localizadas
- * online em 2026-04-28. São preenchidas em `TEAM_ORDER` abaixo (placeholder)
- * e refinadas quando o usuário tiver o álbum em mãos para fotografar o sumário.
+ * IDs no formato Panini: <CODE><N>, ex: "BRA7", "FWC3", "CC11", "ARG17".
  */
 
-export const ALBUM_TOTAL = 980
-export const ALBUM_PAGES = 112
-export const ALBUM_SPECIAL_COUNT = 68
+export const ALBUM_TOTAL = 993
+export const ALBUM_PAGES = 113
 
 export const STICKERS_PER_TEAM = 20
-export const INTRO_COUNT = 9
-export const MUSEUM_COUNT = 11
 export const TEAM_COUNT = 48
 
-export type SectionKind = 'intro' | 'museum' | 'team'
-export type SlotKind = 'crest' | 'team_photo' | 'player' | 'intro' | 'museum'
+export type SectionKind = 'fwc' | 'team' | 'cocacola'
+export type SlotKind = 'crest' | 'team_photo' | 'player' | 'fwc' | 'cocacola'
 
 export interface Sticker {
   id: string
   section: SectionKind
-  /** Código de 3 letras (BRA, ARG, FWC, FM…). */
+  /** Código de 3 letras (BRA, ARG…) ou prefixo de seção especial (FWC, CC). */
   code: string
   /** 1-based dentro do conjunto/seleção. */
   index: number
@@ -43,8 +41,7 @@ export interface Sticker {
   label: string
   /** Tipo dentro da seleção / seção. */
   slot: SlotKind
-  /** Página do álbum onde a figurinha mora (1-112). undefined para seções
-   *  cujas páginas ainda não foram mapeadas. */
+  /** Página do álbum onde a figurinha mora (1-113). undefined se não mapeado. */
   page?: number
 }
 
@@ -61,52 +58,84 @@ export interface Team {
   flag: string
 }
 
-/**
- * Códigos especiais (provisórios — confirmar com o álbum em mãos).
- * Usamos FWC pra Introduction e FM pra FIFA Museum por convenção comum
- * de edições anteriores; podem ser ajustados sem quebrar o app.
- */
-export const INTRO_CODE = 'FWC'
-export const MUSEUM_CODE = 'FM'
+export const FWC_CODE = 'FWC'
+export const CC_CODE = 'CC'
+
+/** @deprecated mantido como alias pra não quebrar consumidores antigos. Use FWC_CODE. */
+export const INTRO_CODE = FWC_CODE
 
 /**
- * Layout da seção Introduction confirmado pelo usuário em 2026-04-29.
- * Cada página tem um conjunto heterogêneo de figurinhas (não é range
- * sequencial como nas seleções). FWC9 ainda não mapeado.
+ * Layout completo da seção FWC (introdução + FIFA Museum/History) confirmado
+ * pelo usuário em 2026-04-29 com fotos do álbum impresso.
  */
-interface IntroSlot {
+interface SectionSlot {
   id: string
   page: number
   label: string
 }
-export const INTRO_LAYOUT: IntroSlot[] = [
-  { id: 'FWC1', page: 1, label: 'Taça Copa 2026 (esq.)' },
-  { id: 'FWC2', page: 1, label: 'Taça Copa 2026 (dir.)' },
-  { id: 'FWC3', page: 1, label: 'Mascotes Oficiais' },
-  { id: 'FWC4', page: 1, label: 'Slogan Oficial' },
-  { id: 'FWC5', page: 2, label: 'Trionda — bola oficial' },
-  { id: 'FWC6', page: 2, label: 'Taça (fundo vermelho — Canadá)' },
-  { id: 'FWC7', page: 3, label: 'Taça (fundo verde)' },
-  { id: 'FWC8', page: 3, label: 'Taça (fundo azul claro)' },
-  { id: 'FWC9', page: undefined as unknown as number, label: 'Introdução 9' },
+
+export const FWC_LAYOUT: SectionSlot[] = [
+  // Introdução (págs 1-3)
+  { id: 'FWC1',  page: 1,   label: 'Taça Copa 2026 (esq.)' },
+  { id: 'FWC2',  page: 1,   label: 'Taça Copa 2026 (dir.)' },
+  { id: 'FWC3',  page: 1,   label: 'Mascotes Oficiais' },
+  { id: 'FWC4',  page: 1,   label: 'Slogan Oficial' },
+  { id: 'FWC5',  page: 2,   label: 'Trionda — bola oficial' },
+  { id: 'FWC6',  page: 2,   label: 'Taça (fundo vermelho — Canadá)' },
+  { id: 'FWC7',  page: 3,   label: 'Taça (fundo verde)' },
+  { id: 'FWC8',  page: 3,   label: 'Taça (fundo azul claro)' },
+  // FIFA Museum / History (págs 106-109)
+  // Só 11 Copas viraram figurinha — outras fotos com hologram nas mesmas
+  // páginas são decoração fixa do álbum.
+  { id: 'FWC9',  page: 106, label: 'Itália 1934 — campeã' },
+  { id: 'FWC10', page: 106, label: 'Uruguai 1950 — campeã' },
+  { id: 'FWC11', page: 107, label: 'Alemanha Ocidental 1954 — campeã' },
+  { id: 'FWC12', page: 107, label: 'Brasil 1962 — campeã' },
+  { id: 'FWC13', page: 107, label: 'Alemanha Ocidental 1974 — campeã' },
+  { id: 'FWC14', page: 108, label: 'Argentina 1986 — campeã' },
+  { id: 'FWC15', page: 108, label: 'Brasil 1994 — campeã' },
+  { id: 'FWC16', page: 109, label: 'Brasil 2002 — campeã' },
+  { id: 'FWC17', page: 109, label: 'Itália 2006 — campeã' },
+  { id: 'FWC18', page: 109, label: 'Alemanha 2014 — campeã' },
+  { id: 'FWC19', page: 109, label: 'Argentina 2022 — campeã' },
 ]
 
-/** Mapa página → IDs da seção Intro nessa página. */
-export const INTRO_IDS_BY_PAGE: Map<number, string[]> = (() => {
+export const CC_LAYOUT: SectionSlot[] = [
+  // Coca-Cola pág 112 (sem numeração impressa)
+  { id: 'CC1',  page: 112, label: 'Lamine Yamal (Espanha)' },
+  { id: 'CC2',  page: 112, label: 'Joshua Kimmich (Alemanha)' },
+  { id: 'CC3',  page: 112, label: 'Harry Kane (Inglaterra)' },
+  { id: 'CC4',  page: 112, label: 'Santiago Giménez (México)' },
+  { id: 'CC5',  page: 112, label: 'Joško Gvardiol (Croácia)' },
+  { id: 'CC6',  page: 112, label: 'Federico Valverde (Uruguai)' },
+  // Coca-Cola pág 113 (contracapa)
+  { id: 'CC7',  page: 113, label: 'Jefferson Lerma (Colômbia)' },
+  { id: 'CC8',  page: 113, label: 'Enner Valencia (Equador)' },
+  { id: 'CC9',  page: 113, label: 'Gabriel Magalhães (Brasil)' },
+  { id: 'CC10', page: 113, label: 'Virgil van Dijk (Holanda)' },
+  { id: 'CC11', page: 113, label: 'Alphonso Davies (Canadá)' },
+  { id: 'CC12', page: 113, label: 'Emiliano Martínez (Argentina)' },
+  { id: 'CC13', page: 113, label: 'Raúl Jiménez (México)' },
+  { id: 'CC14', page: 113, label: 'Lautaro Martínez (Argentina)' },
+]
+
+function buildIdsByPage(layout: SectionSlot[]): Map<number, string[]> {
   const m = new Map<number, string[]>()
-  for (const slot of INTRO_LAYOUT) {
-    if (slot.page == null) continue
+  for (const slot of layout) {
     const arr = m.get(slot.page) ?? []
     arr.push(slot.id)
     m.set(slot.page, arr)
   }
   return m
-})()
+}
 
-const INTRO_LABEL_BY_ID = new Map(INTRO_LAYOUT.map((s) => [s.id, s.label]))
-const INTRO_PAGE_BY_ID = new Map(
-  INTRO_LAYOUT.filter((s) => s.page != null).map((s) => [s.id, s.page]),
-)
+/** Mapa página → IDs da seção FWC nessa página. */
+export const FWC_IDS_BY_PAGE = buildIdsByPage(FWC_LAYOUT)
+/** Mapa página → IDs da seção Coca-Cola nessa página. */
+export const CC_IDS_BY_PAGE = buildIdsByPage(CC_LAYOUT)
+
+/** @deprecated alias pra FWC_IDS_BY_PAGE. */
+export const INTRO_IDS_BY_PAGE = FWC_IDS_BY_PAGE
 
 /**
  * Lista oficial das 48 seleções na ordem do álbum impresso, agrupadas
@@ -114,8 +143,7 @@ const INTRO_PAGE_BY_ID = new Map(
  * fotografado pelo usuário em 2026-04-28.
  *
  * Cada seleção ocupa 2 páginas. Há um intervalo entre os grupos F e G
- * (páginas 56-57 são reservadas para outra coisa — provavelmente seção
- * intermediária com FWC/Heroes).
+ * (páginas 56-57 são reservadas para outra coisa).
  */
 export const TEAMS: Team[] = [
   // Grupo A
@@ -186,40 +214,40 @@ if (TEAMS.length !== TEAM_COUNT) {
 }
 
 /**
- * Gera todas as 980 figurinhas no formato canônico.
- * Ordem: Introduction → FIFA Museum → 48 seleções na ordem de TEAMS.
+ * Gera todas as 993 figurinhas no formato canônico.
+ * Ordem: FWC (intro + museum) → Coca-Cola → 48 seleções na ordem de TEAMS.
  *
  * Para cada seleção, dentro dos 20 slots:
  *   1 = escudo (especial)
- *   2 = foto da equipe
- *   3..20 = jogadores
+ *   13 = foto da equipe
+ *   demais = jogadores
  */
 export function buildAllStickers(): Sticker[] {
   const all: Sticker[] = []
 
-  for (let i = 1; i <= INTRO_COUNT; i++) {
-    const id = `${INTRO_CODE}${i}`
+  for (const [i, slot] of FWC_LAYOUT.entries()) {
     all.push({
-      id,
-      section: 'intro',
-      code: INTRO_CODE,
-      index: i,
+      id: slot.id,
+      section: 'fwc',
+      code: FWC_CODE,
+      index: i + 1,
       isSpecial: true,
-      label: INTRO_LABEL_BY_ID.get(id) ?? `Introdução ${i}`,
-      slot: 'intro',
-      page: INTRO_PAGE_BY_ID.get(id),
+      label: slot.label,
+      slot: 'fwc',
+      page: slot.page,
     })
   }
 
-  for (let i = 1; i <= MUSEUM_COUNT; i++) {
+  for (const [i, slot] of CC_LAYOUT.entries()) {
     all.push({
-      id: `${MUSEUM_CODE}${i}`,
-      section: 'museum',
-      code: MUSEUM_CODE,
-      index: i,
+      id: slot.id,
+      section: 'cocacola',
+      code: CC_CODE,
+      index: i + 1,
       isSpecial: true,
-      label: `FIFA Museum ${i}`,
-      slot: 'museum',
+      label: slot.label,
+      slot: 'cocacola',
+      page: slot.page,
     })
   }
 
@@ -258,11 +286,6 @@ export const ALL_STICKERS: Sticker[] = buildAllStickers()
 
 if (ALL_STICKERS.length !== ALBUM_TOTAL) {
   throw new Error(`Esperava ${ALBUM_TOTAL} figurinhas, gerou ${ALL_STICKERS.length}`)
-}
-
-const specialCount = ALL_STICKERS.filter((s) => s.isSpecial).length
-if (specialCount !== ALBUM_SPECIAL_COUNT) {
-  throw new Error(`Esperava ${ALBUM_SPECIAL_COUNT} especiais, gerou ${specialCount}`)
 }
 
 export const STICKERS_BY_ID: Map<string, Sticker> = new Map(
