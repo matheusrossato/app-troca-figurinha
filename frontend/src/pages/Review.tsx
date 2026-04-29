@@ -13,6 +13,7 @@ import {
   TEAMS_BY_CODE,
 } from '../data/album'
 import { bulkAdd, bulkIncrement } from '../db'
+import { useCollection } from '../hooks/useCollection'
 
 interface LocationState {
   capture?: CapturedImage
@@ -39,6 +40,7 @@ export default function Review() {
   const state = location.state as LocationState | null
   const capture = state?.capture
   const mode: CaptureMode = state?.mode ?? capture?.mode ?? 'page'
+  const collection = useCollection()
 
   const [status, setStatus] = useState<Status>('running')
   const [progress, setProgress] = useState(0)
@@ -69,10 +71,17 @@ export default function Review() {
         if (r.mode === 'backs') {
           setCounts(new Map(r.counts))
         } else {
-          const initial =
+          // Upsert inteligente: pré-seleciona só os filled que AINDA não estão
+          // no banco. Os já-no-álbum ficam visíveis como "✓ no álbum" mas não
+          // re-marcados (evita virar repetidos).
+          const initial = new Set<string>()
+          const filledSource =
             r.source === 'gemini' && r.filledIds.size > 0
-              ? new Set(r.filledIds)
+              ? r.filledIds
               : new Set(r.ids.map((d) => d.id))
+          for (const id of filledSource) {
+            if (!collection.byId.has(id)) initial.add(id)
+          }
           setSelected(initial)
         }
         setStatus('done')
@@ -158,6 +167,7 @@ export default function Review() {
           onToggle={toggle}
           onConfirm={handleConfirmPage}
           geminiError={geminiError}
+          ownedById={collection.byId}
         />
       )}
 
@@ -271,12 +281,14 @@ function PageResultPanel({
   onToggle,
   onConfirm,
   geminiError,
+  ownedById,
 }: {
   result: RecognitionResult
   selected: Set<string>
   onToggle: (id: string) => void
   onConfirm: () => void
   geminiError?: string
+  ownedById: Map<string, { count: number }>
 }) {
   if (result.ids.length === 0) {
     return <EmptyResult result={result} geminiError={geminiError} />
@@ -327,10 +339,9 @@ function PageResultPanel({
 
       {result.source === 'gemini' && (
         <p className="rounded-lg border border-neutral-800 bg-neutral-900/30 px-3 py-2 text-xs text-neutral-400">
-          Pré-selecionei as <strong className="text-emerald-300">coladas</strong> detectadas. Os IDs
-          marcados como <strong className="text-neutral-300">"esperada"</strong> não foram detectados
-          pelo Gemini — toque para marcar manualmente se você os tem (ex: FWC coladas que mostram só
-          a imagem do troféu).
+          Pré-selecionei só as figurinhas <strong className="text-amber-300">novas</strong> (coladas
+          que ainda não tinha registrado). Cards <strong className="text-emerald-400">"no álbum"</strong>
+          já estão na sua coleção e não duplicam — toque caso queira tratar como repetida.
         </p>
       )}
 
@@ -340,22 +351,37 @@ function PageResultPanel({
           const isOn = selected.has(id)
           const wasDetected = detectedSet.has(id)
           const isFilled = result.filledIds.has(id)
-          const tag = !wasDetected
-            ? { label: 'esperada', cls: 'text-neutral-500' }
-            : isFilled
-              ? { label: 'colada', cls: 'text-emerald-400' }
-              : { label: 'vazio', cls: 'text-neutral-600' }
+          const owned = ownedById.get(id)
+
+          let tag: { label: string; cls: string }
+          let containerCls: string
+          if (owned) {
+            tag = { label: `no álbum × ${owned.count}`, cls: 'text-emerald-400' }
+            containerCls = isOn
+              ? 'border-gold-500 bg-gold-500/10 text-white'
+              : 'border-emerald-900/40 bg-emerald-950/20 text-emerald-100'
+          } else if (!wasDetected) {
+            tag = { label: 'esperada', cls: 'text-neutral-500' }
+            containerCls = isOn
+              ? 'border-gold-500 bg-gold-500/10 text-white'
+              : 'border-dashed border-neutral-800 bg-neutral-900/20 text-neutral-500'
+          } else if (isFilled) {
+            tag = { label: 'nova', cls: 'text-amber-300' }
+            containerCls = isOn
+              ? 'border-gold-500 bg-gold-500/10 text-white'
+              : 'border-amber-900/40 bg-amber-950/20 text-amber-100'
+          } else {
+            tag = { label: 'vazio', cls: 'text-neutral-600' }
+            containerCls = isOn
+              ? 'border-gold-500 bg-gold-500/10 text-white'
+              : 'border-neutral-800 bg-neutral-900/50 text-neutral-400'
+          }
+
           return (
             <li key={id}>
               <button
                 onClick={() => onToggle(id)}
-                className={`w-full rounded-xl border px-3 py-2 text-left transition ${
-                  isOn
-                    ? 'border-gold-500 bg-gold-500/10 text-white'
-                    : wasDetected
-                      ? 'border-neutral-800 bg-neutral-900/50 text-neutral-400'
-                      : 'border-dashed border-neutral-800 bg-neutral-900/20 text-neutral-500'
-                }`}
+                className={`w-full rounded-xl border px-3 py-2 text-left transition ${containerCls}`}
               >
                 <div className="flex items-center gap-2 font-mono text-sm font-semibold">
                   <span>{id}</span>
@@ -363,7 +389,7 @@ function PageResultPanel({
                     {tag.label}
                   </span>
                 </div>
-                <div className="truncate text-xs text-neutral-500">
+                <div className="truncate text-xs opacity-80">
                   {sticker?.label ?? '—'}
                 </div>
               </button>
@@ -379,7 +405,9 @@ function PageResultPanel({
       >
         <div className="rounded-[14px] bg-[#0a0a0f] px-5 py-3 text-center">
           <span className="text-sm font-bold text-white">
-            Salvar {selected.size} figurinha{selected.size === 1 ? '' : 's'}
+            {selected.size === 0
+              ? 'Nada a adicionar'
+              : `Adicionar ${selected.size} ao álbum`}
           </span>
         </div>
       </button>
