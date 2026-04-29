@@ -2,26 +2,42 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   type CaptureMode,
-  type CapturedImage,
   captureFrame,
   startRearCamera,
   stopStream,
 } from '../lib/camera'
+import {
+  type FocusQuality,
+  type FocusState,
+  createFocusTracker,
+  measureSharpness,
+} from '../lib/blur-detection'
 
-type Status = 'idle' | 'starting' | 'live' | 'denied' | 'error' | 'review'
+type Status = 'starting' | 'live' | 'capturing' | 'denied' | 'error'
+
+const ANALYSIS_INTERVAL_MS = 100
 
 export default function Capture() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const [status, setStatus] = useState<Status>('idle')
-  const [errorMsg, setErrorMsg] = useState<string>('')
-  const [mode, setMode] = useState<CaptureMode>('page')
-  const [capture, setCapture] = useState<CapturedImage | null>(null)
+  const trackerRef = useRef(createFocusTracker())
+  const intervalRef = useRef<number | null>(null)
   const navigate = useNavigate()
 
+  const [status, setStatus] = useState<Status>('starting')
+  const [errorMsg, setErrorMsg] = useState<string>('')
+  const [mode, setMode] = useState<CaptureMode>('page')
+  const [autoCapture, setAutoCapture] = useState<boolean>(true)
+  const [focus, setFocus] = useState<FocusState>({
+    raw: 0,
+    smoothed: 0,
+    quality: 'searching',
+    stable: false,
+  })
+
+  // Inicializa câmera no mount.
   useEffect(() => {
     let cancelled = false
-
     async function start() {
       if (!videoRef.current) return
       setStatus('starting')
@@ -35,15 +51,13 @@ export default function Capture() {
         setStatus('live')
       } catch (err) {
         const e = err as DOMException | Error
-        if ((e as DOMException).name === 'NotAllowedError') {
-          setStatus('denied')
-        } else {
+        if ((e as DOMException).name === 'NotAllowedError') setStatus('denied')
+        else {
           setStatus('error')
           setErrorMsg(e.message || 'Não foi possível iniciar a câmera.')
         }
       }
     }
-
     start()
     return () => {
       cancelled = true
@@ -52,39 +66,54 @@ export default function Capture() {
     }
   }, [])
 
-  async function handleCapture() {
-    if (!videoRef.current) return
+  // Loop de medição de nitidez quando está "live" e não capturando.
+  useEffect(() => {
+    if (status !== 'live') return
+    trackerRef.current.reset()
+    const id = window.setInterval(() => {
+      if (!videoRef.current) return
+      const sharpness = measureSharpness(videoRef.current)
+      const state = trackerRef.current.push(sharpness)
+      setFocus(state)
+    }, ANALYSIS_INTERVAL_MS)
+    intervalRef.current = id
+    return () => {
+      window.clearInterval(id)
+      intervalRef.current = null
+    }
+  }, [status])
+
+  // Auto-captura quando estável + autoCapture ligado.
+  useEffect(() => {
+    if (!autoCapture) return
+    if (status !== 'live') return
+    if (!focus.stable) return
+    void doCapture()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus.stable, autoCapture, status])
+
+  async function doCapture() {
+    if (!videoRef.current || status === 'capturing') return
+    setStatus('capturing')
+    if (intervalRef.current) {
+      window.clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
     try {
       const shot = await captureFrame(videoRef.current, mode)
-      setCapture(shot)
-      setStatus('review')
       stopStream(streamRef.current)
       streamRef.current = null
+      try {
+        navigator.vibrate?.(40)
+      } catch {
+        /* opcional */
+      }
+      navigate('/review', { state: { capture: shot, mode } })
     } catch (err) {
       const e = err as Error
       setStatus('error')
       setErrorMsg(e.message)
     }
-  }
-
-  async function handleRetake() {
-    setCapture(null)
-    setStatus('starting')
-    if (videoRef.current) {
-      try {
-        const stream = await startRearCamera(videoRef.current)
-        streamRef.current = stream
-        setStatus('live')
-      } catch (err) {
-        setStatus('error')
-        setErrorMsg((err as Error).message)
-      }
-    }
-  }
-
-  function handleProceed() {
-    if (!capture) return
-    navigate('/review', { state: { capture, mode } })
   }
 
   if (status === 'denied') {
@@ -108,69 +137,121 @@ export default function Capture() {
     )
   }
 
-  if (status === 'review' && capture) {
-    return (
-      <div className="space-y-3">
-        <div className="overflow-hidden rounded-xl border border-neutral-800">
-          <img src={capture.dataUrl} alt="captura" className="block w-full" />
-        </div>
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 px-3 py-2 text-xs text-neutral-400">
-          Modo: <span className="text-neutral-200">{mode === 'page' ? 'Página inteira' : 'Figurinha única'}</span>
-          <span className="mx-2 text-neutral-700">·</span>
-          {capture.width}×{capture.height}px
-          <span className="mx-2 text-neutral-700">·</span>
-          {(capture.blob.size / 1024).toFixed(0)} KB
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={handleRetake}
-            className="rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-3 font-medium text-neutral-200 transition active:scale-[0.99]"
-          >
-            Refazer
-          </button>
-          <button
-            onClick={handleProceed}
-            className="rounded-xl bg-brand-500 px-4 py-3 font-medium text-white transition hover:bg-brand-600 active:scale-[0.99]"
-          >
-            Reconhecer →
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-3">
-      <div className="relative overflow-hidden rounded-xl border border-neutral-800 bg-black">
+    <div className="-mx-4 -my-4 flex h-[calc(100vh-3.25rem-3.25rem)] flex-col bg-black">
+      <div className="relative flex-1 overflow-hidden">
         <video
           ref={videoRef}
           playsInline
           muted
-          className="block aspect-[3/4] w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
         />
-        {status !== 'live' && (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">
-            Iniciando câmera…
-          </div>
-        )}
+        <FocusOverlay quality={focus.quality} status={status} autoCapture={autoCapture} />
       </div>
 
-      <ModeToggle mode={mode} onChange={setMode} />
+      <div className="space-y-2.5 border-t border-neutral-900 bg-[#0a0a0f] px-4 pt-3 pb-4">
+        <ModeToggle mode={mode} onChange={setMode} />
 
-      <button
-        onClick={handleCapture}
-        disabled={status !== 'live'}
-        className="w-full rounded-xl bg-brand-500 px-5 py-4 font-medium text-white shadow-lg shadow-brand-500/20 transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:shadow-none"
-      >
-        {mode === 'page' ? 'Capturar página do álbum' : 'Capturar repetidas (verso)'}
-      </button>
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => setAutoCapture((v) => !v)}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+              autoCapture
+                ? 'border-gold-700 bg-gold-500/10 text-gold-300'
+                : 'border-neutral-800 bg-neutral-900 text-neutral-400'
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                autoCapture ? 'bg-gold-400' : 'bg-neutral-600'
+              }`}
+            />
+            Auto-captura
+          </button>
+          <FocusBadge quality={focus.quality} smoothed={focus.smoothed} />
+        </div>
 
-      <p className="px-1 text-xs text-neutral-500">
-        {mode === 'page'
-          ? 'Enquadre a página inteira do álbum, com boa iluminação. O app vai detectar os IDs e quais figurinhas estão coladas.'
-          : 'Espalhe as figurinhas repetidas com o VERSO virado para cima. Cada verso tem o ID no canto superior direito (ex: "AUT 8"). Pode haver duplicatas — cada uma soma +1 no estoque.'}
-      </p>
+        <button
+          onClick={doCapture}
+          disabled={status !== 'live'}
+          className="bg-fwc-rainbow shadow-gold-glow w-full rounded-2xl p-[2px] transition active:scale-[0.99] disabled:opacity-50"
+        >
+          <div className="rounded-[14px] bg-[#0a0a0f] px-4 py-3 text-center">
+            <span className="text-sm font-bold text-white">
+              {status === 'capturing'
+                ? 'Capturando…'
+                : mode === 'page'
+                  ? 'Capturar página'
+                  : 'Capturar versos'}
+            </span>
+          </div>
+        </button>
+      </div>
     </div>
+  )
+}
+
+function FocusOverlay({
+  quality,
+  status,
+  autoCapture,
+}: {
+  quality: FocusQuality
+  status: Status
+  autoCapture: boolean
+}) {
+  const ringColor =
+    quality === 'sharp'
+      ? 'border-emerald-400'
+      : quality === 'ok'
+        ? 'border-amber-400'
+        : quality === 'low'
+          ? 'border-red-500/70'
+          : 'border-neutral-500/40'
+
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <div
+        className={`h-[88%] w-[92%] rounded-2xl border-2 ${ringColor} transition-colors duration-200`}
+        style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.20)' }}
+      />
+      {status === 'starting' && (
+        <span className="absolute bottom-4 text-xs text-neutral-300">
+          Iniciando câmera…
+        </span>
+      )}
+      {status === 'capturing' && (
+        <span className="absolute bottom-4 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-black">
+          📸 capturando
+        </span>
+      )}
+      {status === 'live' && autoCapture && quality === 'sharp' && (
+        <span className="absolute bottom-4 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-black">
+          nítido
+        </span>
+      )}
+    </div>
+  )
+}
+
+function FocusBadge({
+  quality,
+  smoothed,
+}: {
+  quality: FocusQuality
+  smoothed: number
+}) {
+  const map: Record<FocusQuality, { label: string; color: string }> = {
+    searching: { label: 'buscando…', color: 'text-neutral-500' },
+    low: { label: 'desfocado', color: 'text-red-400' },
+    ok: { label: 'razoável', color: 'text-amber-300' },
+    sharp: { label: 'nítido', color: 'text-emerald-400' },
+  }
+  const v = map[quality]
+  return (
+    <span className={`font-mono text-xs ${v.color}`}>
+      {v.label} <span className="text-neutral-600">{Math.round(smoothed)}</span>
+    </span>
   )
 }
 
@@ -205,8 +286,8 @@ function ToggleButton({
   return (
     <button
       onClick={onClick}
-      className={`rounded-lg py-2 font-medium transition ${
-        selected ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:text-neutral-200'
+      className={`rounded-lg py-2 font-semibold transition ${
+        selected ? 'bg-neutral-800 text-gold-300' : 'text-neutral-400 hover:text-neutral-200'
       }`}
     >
       {children}
