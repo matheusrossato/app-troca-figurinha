@@ -1,20 +1,77 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #f0f4ff;
-  --color-brand-100: #dbe5ff;
-  --color-brand-500: #2563eb;
-  --color-brand-600: #1d4ed8;
-  --color-brand-700: #1e40af;
+  /* Paleta oficial FIFA World Cup 2026: dourado como destaque, preto/branco
+   * como base. Sistema flexível com cores das 16 cidades-sede. */
+  --color-gold-50:  #fffaeb;
+  --color-gold-100: #fef0c7;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #f5b800;
+  --color-gold-500: #d4a017;
+  --color-gold-600: #a87a0e;
+  --color-gold-700: #7d5806;
+
+  /* Acentos do gradiente "arco-íris" do álbum (cores das cidades-sede) */
+  --color-accent-red:    #ef4444;
+  --color-accent-orange: #f97316;
+  --color-accent-yellow: #eab308;
+  --color-accent-green:  #10b981;
+  --color-accent-cyan:   #06b6d4;
+  --color-accent-blue:   #3b82f6;
+  --color-accent-violet: #8b5cf6;
+  --color-accent-pink:   #ec4899;
+
+  /* Aliases pra compatibilidade com brand-* já espalhado no código */
+  --color-brand-50:  #fffaeb;
+  --color-brand-100: #fef0c7;
+  --color-brand-500: #f5b800;
+  --color-brand-600: #d4a017;
+  --color-brand-700: #a87a0e;
+
+  --font-display: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 html, body, #root {
   height: 100%;
   margin: 0;
-  background: #0a0a0a;
+  background: #0a0a0f;
   color: #f5f5f5;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-display);
   -webkit-font-smoothing: antialiased;
 }
 
 * { box-sizing: border-box; }
+
+/* Gradiente do "arco-íris 26" usado no header e detalhes */
+.bg-fwc-rainbow {
+  background-image:
+    linear-gradient(
+      90deg,
+      #ef4444 0%,
+      #f97316 14%,
+      #eab308 28%,
+      #10b981 42%,
+      #06b6d4 56%,
+      #3b82f6 70%,
+      #8b5cf6 84%,
+      #ec4899 100%
+    );
+}
+
+.text-fwc-rainbow {
+  background-image: linear-gradient(
+    90deg,
+    #ef4444, #f97316, #eab308, #10b981, #06b6d4, #3b82f6, #8b5cf6, #ec4899
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glow dourado pros botões primários */
+.shadow-gold-glow {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.08) inset,
+    0 8px 24px -8px rgba(245, 184, 0, 0.55),
+    0 4px 8px -2px rgba(0, 0, 0, 0.4);
+}
