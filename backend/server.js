@@ -7,7 +7,12 @@ if (!apiKey) {
   process.exit(1)
 }
 
-const allowedOrigin = process.env.ALLOWED_ORIGIN || '*'
+// ALLOWED_ORIGIN aceita múltiplas origens separadas por vírgula. Durante a
+// transição da URL do app, mantemos as duas funcionando.
+const allowedOrigins = (process.env.ALLOWED_ORIGIN || '*')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
 const sharedToken = process.env.CLIENT_TOKEN || ''
 
 const genAI = new GoogleGenerativeAI(apiKey)
@@ -107,7 +112,12 @@ const app = express()
 app.use(express.json({ limit: '12mb' }))
 
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
+  const origin = req.headers.origin
+  if (allowedOrigins.includes('*')) {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+  } else if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+  }
   res.setHeader('Vary', 'Origin')
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Client-Token')

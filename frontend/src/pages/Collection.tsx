@@ -91,7 +91,7 @@ function TeamFilter({
       <option value="all">Todas as seções</option>
       {TEAMS.map((t) => (
         <option key={t.code} value={t.code}>
-          {t.name} ({t.code})
+          {t.flag} {t.name} · Grupo {t.group}
         </option>
       ))}
     </select>

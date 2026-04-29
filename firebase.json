@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "meualbum-copa2026",
     "public": "frontend/dist",
     "ignore": [
       "firebase.json",

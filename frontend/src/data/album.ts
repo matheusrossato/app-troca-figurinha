@@ -51,12 +51,14 @@ export interface Sticker {
 export interface Team {
   /** Código de 3 letras usado no álbum Panini 2026. */
   code: string
-  /** Nome em português. */
+  /** Nome em português (alinhado à fonte oficial fifa.com/pt). */
   name: string
   /** Grupo da Copa (A..L). */
   group: string
   /** Página onde a seleção começa no álbum impresso (cada seleção ocupa 2 páginas). */
   startPage: number
+  /** Emoji da bandeira (regional indicator / subdivision flag). */
+  flag: string
 }
 
 /**
@@ -78,66 +80,66 @@ export const MUSEUM_CODE = 'FM'
  */
 export const TEAMS: Team[] = [
   // Grupo A
-  { code: 'MEX', name: 'México', group: 'A', startPage: 8 },
-  { code: 'RSA', name: 'África do Sul', group: 'A', startPage: 10 },
-  { code: 'KOR', name: 'Coreia do Sul', group: 'A', startPage: 12 },
-  { code: 'CZE', name: 'Tchéquia', group: 'A', startPage: 14 },
+  { code: 'MEX', name: 'México',           group: 'A', startPage: 8,   flag: '🇲🇽' },
+  { code: 'RSA', name: 'África do Sul',    group: 'A', startPage: 10,  flag: '🇿🇦' },
+  { code: 'KOR', name: 'Coreia do Sul',    group: 'A', startPage: 12,  flag: '🇰🇷' },
+  { code: 'CZE', name: 'Tchéquia',         group: 'A', startPage: 14,  flag: '🇨🇿' },
   // Grupo B
-  { code: 'CAN', name: 'Canadá', group: 'B', startPage: 16 },
-  { code: 'BIH', name: 'Bósnia e Herzegovina', group: 'B', startPage: 18 },
-  { code: 'QAT', name: 'Catar', group: 'B', startPage: 20 },
-  { code: 'SUI', name: 'Suíça', group: 'B', startPage: 22 },
+  { code: 'CAN', name: 'Canadá',           group: 'B', startPage: 16,  flag: '🇨🇦' },
+  { code: 'BIH', name: 'Bósnia e Herzegovina', group: 'B', startPage: 18, flag: '🇧🇦' },
+  { code: 'QAT', name: 'Catar',            group: 'B', startPage: 20,  flag: '🇶🇦' },
+  { code: 'SUI', name: 'Suíça',            group: 'B', startPage: 22,  flag: '🇨🇭' },
   // Grupo C
-  { code: 'BRA', name: 'Brasil', group: 'C', startPage: 24 },
-  { code: 'MAR', name: 'Marrocos', group: 'C', startPage: 26 },
-  { code: 'HAI', name: 'Haiti', group: 'C', startPage: 28 },
-  { code: 'SCO', name: 'Escócia', group: 'C', startPage: 30 },
+  { code: 'BRA', name: 'Brasil',           group: 'C', startPage: 24,  flag: '🇧🇷' },
+  { code: 'MAR', name: 'Marrocos',         group: 'C', startPage: 26,  flag: '🇲🇦' },
+  { code: 'HAI', name: 'Haiti',            group: 'C', startPage: 28,  flag: '🇭🇹' },
+  { code: 'SCO', name: 'Escócia',          group: 'C', startPage: 30,  flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
   // Grupo D
-  { code: 'USA', name: 'Estados Unidos', group: 'D', startPage: 32 },
-  { code: 'PAR', name: 'Paraguai', group: 'D', startPage: 34 },
-  { code: 'AUS', name: 'Austrália', group: 'D', startPage: 36 },
-  { code: 'TUR', name: 'Turquia', group: 'D', startPage: 38 },
+  { code: 'USA', name: 'EUA',              group: 'D', startPage: 32,  flag: '🇺🇸' },
+  { code: 'PAR', name: 'Paraguai',         group: 'D', startPage: 34,  flag: '🇵🇾' },
+  { code: 'AUS', name: 'Austrália',        group: 'D', startPage: 36,  flag: '🇦🇺' },
+  { code: 'TUR', name: 'Turquia',          group: 'D', startPage: 38,  flag: '🇹🇷' },
   // Grupo E
-  { code: 'GER', name: 'Alemanha', group: 'E', startPage: 40 },
-  { code: 'CUW', name: 'Curaçao', group: 'E', startPage: 42 },
-  { code: 'CIV', name: 'Costa do Marfim', group: 'E', startPage: 44 },
-  { code: 'ECU', name: 'Equador', group: 'E', startPage: 46 },
+  { code: 'GER', name: 'Alemanha',         group: 'E', startPage: 40,  flag: '🇩🇪' },
+  { code: 'CUW', name: 'Curaçau',          group: 'E', startPage: 42,  flag: '🇨🇼' },
+  { code: 'CIV', name: 'Costa do Marfim',  group: 'E', startPage: 44,  flag: '🇨🇮' },
+  { code: 'ECU', name: 'Equador',          group: 'E', startPage: 46,  flag: '🇪🇨' },
   // Grupo F
-  { code: 'NED', name: 'Países Baixos', group: 'F', startPage: 48 },
-  { code: 'JPN', name: 'Japão', group: 'F', startPage: 50 },
-  { code: 'SWE', name: 'Suécia', group: 'F', startPage: 52 },
-  { code: 'TUN', name: 'Tunísia', group: 'F', startPage: 54 },
+  { code: 'NED', name: 'Holanda',          group: 'F', startPage: 48,  flag: '🇳🇱' },
+  { code: 'JPN', name: 'Japão',            group: 'F', startPage: 50,  flag: '🇯🇵' },
+  { code: 'SWE', name: 'Suécia',           group: 'F', startPage: 52,  flag: '🇸🇪' },
+  { code: 'TUN', name: 'Tunísia',          group: 'F', startPage: 54,  flag: '🇹🇳' },
   // [páginas 56-57 são seção especial entre F e G]
   // Grupo G
-  { code: 'BEL', name: 'Bélgica', group: 'G', startPage: 58 },
-  { code: 'EGY', name: 'Egito', group: 'G', startPage: 60 },
-  { code: 'IRN', name: 'Irã', group: 'G', startPage: 62 },
-  { code: 'NZL', name: 'Nova Zelândia', group: 'G', startPage: 64 },
+  { code: 'BEL', name: 'Bélgica',          group: 'G', startPage: 58,  flag: '🇧🇪' },
+  { code: 'EGY', name: 'Egito',            group: 'G', startPage: 60,  flag: '🇪🇬' },
+  { code: 'IRN', name: 'Irã',              group: 'G', startPage: 62,  flag: '🇮🇷' },
+  { code: 'NZL', name: 'Nova Zelândia',    group: 'G', startPage: 64,  flag: '🇳🇿' },
   // Grupo H
-  { code: 'ESP', name: 'Espanha', group: 'H', startPage: 66 },
-  { code: 'CPV', name: 'Cabo Verde', group: 'H', startPage: 68 },
-  { code: 'KSA', name: 'Arábia Saudita', group: 'H', startPage: 70 },
-  { code: 'URU', name: 'Uruguai', group: 'H', startPage: 72 },
+  { code: 'ESP', name: 'Espanha',          group: 'H', startPage: 66,  flag: '🇪🇸' },
+  { code: 'CPV', name: 'Cabo Verde',       group: 'H', startPage: 68,  flag: '🇨🇻' },
+  { code: 'KSA', name: 'Arábia Saudita',   group: 'H', startPage: 70,  flag: '🇸🇦' },
+  { code: 'URU', name: 'Uruguai',          group: 'H', startPage: 72,  flag: '🇺🇾' },
   // Grupo I
-  { code: 'FRA', name: 'França', group: 'I', startPage: 74 },
-  { code: 'SEN', name: 'Senegal', group: 'I', startPage: 76 },
-  { code: 'IRQ', name: 'Iraque', group: 'I', startPage: 78 },
-  { code: 'NOR', name: 'Noruega', group: 'I', startPage: 80 },
+  { code: 'FRA', name: 'França',           group: 'I', startPage: 74,  flag: '🇫🇷' },
+  { code: 'SEN', name: 'Senegal',          group: 'I', startPage: 76,  flag: '🇸🇳' },
+  { code: 'IRQ', name: 'Iraque',           group: 'I', startPage: 78,  flag: '🇮🇶' },
+  { code: 'NOR', name: 'Noruega',          group: 'I', startPage: 80,  flag: '🇳🇴' },
   // Grupo J
-  { code: 'ARG', name: 'Argentina', group: 'J', startPage: 82 },
-  { code: 'ALG', name: 'Argélia', group: 'J', startPage: 84 },
-  { code: 'AUT', name: 'Áustria', group: 'J', startPage: 86 },
-  { code: 'JOR', name: 'Jordânia', group: 'J', startPage: 88 },
+  { code: 'ARG', name: 'Argentina',        group: 'J', startPage: 82,  flag: '🇦🇷' },
+  { code: 'ALG', name: 'Argélia',          group: 'J', startPage: 84,  flag: '🇩🇿' },
+  { code: 'AUT', name: 'Áustria',          group: 'J', startPage: 86,  flag: '🇦🇹' },
+  { code: 'JOR', name: 'Jordânia',         group: 'J', startPage: 88,  flag: '🇯🇴' },
   // Grupo K
-  { code: 'POR', name: 'Portugal', group: 'K', startPage: 90 },
-  { code: 'COD', name: 'Congo (RD)', group: 'K', startPage: 92 },
-  { code: 'UZB', name: 'Uzbequistão', group: 'K', startPage: 94 },
-  { code: 'COL', name: 'Colômbia', group: 'K', startPage: 96 },
+  { code: 'POR', name: 'Portugal',         group: 'K', startPage: 90,  flag: '🇵🇹' },
+  { code: 'COD', name: 'RD do Congo',      group: 'K', startPage: 92,  flag: '🇨🇩' },
+  { code: 'UZB', name: 'Uzbequistão',      group: 'K', startPage: 94,  flag: '🇺🇿' },
+  { code: 'COL', name: 'Colômbia',         group: 'K', startPage: 96,  flag: '🇨🇴' },
   // Grupo L
-  { code: 'ENG', name: 'Inglaterra', group: 'L', startPage: 98 },
-  { code: 'CRO', name: 'Croácia', group: 'L', startPage: 100 },
-  { code: 'GHA', name: 'Gana', group: 'L', startPage: 102 },
-  { code: 'PAN', name: 'Panamá', group: 'L', startPage: 104 },
+  { code: 'ENG', name: 'Inglaterra',       group: 'L', startPage: 98,  flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { code: 'CRO', name: 'Croácia',          group: 'L', startPage: 100, flag: '🇭🇷' },
+  { code: 'GHA', name: 'Gana',             group: 'L', startPage: 102, flag: '🇬🇭' },
+  { code: 'PAN', name: 'Panamá',           group: 'L', startPage: 104, flag: '🇵🇦' },
 ]
 
 if (TEAMS.length !== TEAM_COUNT) {

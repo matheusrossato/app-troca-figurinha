@@ -282,13 +282,30 @@ function PageResultPanel({
     return <EmptyResult result={result} geminiError={geminiError} />
   }
 
-  const teamName = result.team ? TEAMS_BY_CODE.get(result.team)?.name : null
+  const team = result.team ? TEAMS_BY_CODE.get(result.team) : null
   const allIds = expandExpectedIds(result.ids, result.team)
   const detectedSet = new Set(result.ids.map((d) => d.id))
   const expectedNotDetected = allIds.filter((id) => !detectedSet.has(id))
 
   return (
     <div className="space-y-3">
+      {team && (
+        <div className="flex items-center gap-3 rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 px-4 py-3">
+          <span className="text-3xl leading-none">{team.flag}</span>
+          <div className="flex-1">
+            <div className="text-base font-bold text-white">{team.name}</div>
+            <div className="text-[11px] uppercase tracking-wide text-neutral-500">
+              Grupo {team.group} · {team.code}
+            </div>
+          </div>
+          {result.page && (
+            <span className="rounded-md bg-neutral-800/60 px-2 py-0.5 text-xs font-mono text-neutral-300">
+              p. {result.page}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-neutral-500">
         <span>
           {result.ids.length} detectada{result.ids.length === 1 ? '' : 's'}
@@ -303,8 +320,6 @@ function PageResultPanel({
             +{expectedNotDetected.length} esperada{expectedNotDetected.length === 1 ? '' : 's'}
           </span>
         )}
-        {teamName && <span className="text-neutral-300">{teamName}</span>}
-        {result.page && <span>p. {result.page}</span>}
         <span>·</span>
         <span>{result.source === 'gemini' ? 'Gemini' : 'Tesseract'}</span>
         <span>{Math.round(result.durationMs)}ms</span>

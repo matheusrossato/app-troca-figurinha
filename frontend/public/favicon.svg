@@ -6,30 +6,42 @@
       <stop offset="55%" stop-color="#f5b800"/>
       <stop offset="100%" stop-color="#a87a0e"/>
     </linearGradient>
+    <clipPath id="card">
+      <rect x="0" y="0" width="64" height="64" rx="12"/>
+    </clipPath>
   </defs>
+
+  <!-- Card dourado de fundo -->
   <rect x="0" y="0" width="64" height="64" rx="12" fill="url(#g)"/>
 
-  <!-- Faixa arco-íris no rodapé do "card" -->
-  <g transform="translate(0, 59)" clip-path="inset(0 round 0 0 12 12)">
-    <rect x="0" y="0" width="9" height="5" fill="#ef4444"/><rect x="8" y="0" width="9" height="5" fill="#f97316"/><rect x="16" y="0" width="9" height="5" fill="#eab308"/><rect x="24" y="0" width="9" height="5" fill="#10b981"/><rect x="32" y="0" width="9" height="5" fill="#06b6d4"/><rect x="40" y="0" width="9" height="5" fill="#3b82f6"/><rect x="48" y="0" width="9" height="5" fill="#8b5cf6"/><rect x="56" y="0" width="9" height="5" fill="#ec4899"/>
+  <!-- Padrão sutil 48-unit-style por trás de tudo -->
+  <g clip-path="url(#card)">
+    <rect x="0" y="0" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 8 0 h 8 v 8 h -8 z M 8 0 L 16 0 A 8 8 0 0 1 8 8 z" fill="rgba(0,0,0,0.05)"/><rect x="16" y="0" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="24" y="0" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="32" y="0" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="40" y="0" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 56 0 h 8 v 8 h -8 z M 64 0 L 56 0 A 8 8 0 0 0 64 8 z" fill="rgba(0,0,0,0.05)"/><rect x="0" y="8" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 8 8 h 8 v 8 h -8 z M 16 16 L 8 16 A 8 8 0 0 1 16 8 z" fill="rgba(0,0,0,0.05)"/><rect x="16" y="8" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="24" y="8" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="32" y="8" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 40 8 h 8 v 8 h -8 z M 40 8 L 48 8 A 8 8 0 0 1 40 16 z" fill="rgba(0,0,0,0.05)"/><path d="M 48 8 h 8 v 8 h -8 z M 56 8 L 48 8 A 8 8 0 0 0 56 16 z" fill="rgba(0,0,0,0.05)"/><rect x="56" y="8" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="0" y="16" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="24" y="16" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="32" y="16" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="48" y="16" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="56" y="16" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 0 24 h 8 v 8 h -8 z M 8 32 L 0 32 A 8 8 0 0 1 8 24 z" fill="rgba(0,0,0,0.05)"/><rect x="8" y="24" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="16" y="24" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="32" y="24" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="40" y="24" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="48" y="24" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="56" y="24" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="0" y="32" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 8 32 h 8 v 8 h -8 z M 16 32 L 8 32 A 8 8 0 0 0 16 40 z" fill="rgba(0,0,0,0.05)"/><rect x="16" y="32" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="24" y="32" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="40" y="32" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="56" y="32" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="0" y="40" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 8 40 h 8 v 8 h -8 z M 16 40 L 8 40 A 8 8 0 0 0 16 48 z" fill="rgba(0,0,0,0.05)"/><path d="M 16 40 h 8 v 8 h -8 z M 24 48 L 16 48 A 8 8 0 0 1 24 40 z" fill="rgba(0,0,0,0.05)"/><rect x="24" y="40" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="32" y="40" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="40" y="40" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="48" y="40" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="56" y="40" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="0" y="48" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 8 48 h 8 v 8 h -8 z M 16 56 L 8 56 A 8 8 0 0 1 16 48 z" fill="rgba(0,0,0,0.05)"/><rect x="24" y="48" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="32" y="48" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="40" y="48" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="48" y="48" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 56 48 h 8 v 8 h -8 z M 64 48 L 56 48 A 8 8 0 0 0 64 56 z" fill="rgba(0,0,0,0.05)"/><rect x="0" y="56" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="8" y="56" width="8" height="8" fill="rgba(0,0,0,0.06)"/><rect x="16" y="56" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 24 56 h 8 v 8 h -8 z M 24 56 L 32 56 A 8 8 0 0 1 24 64 z" fill="rgba(0,0,0,0.05)"/><rect x="32" y="56" width="8" height="8" fill="rgba(0,0,0,0.06)"/><path d="M 40 56 h 8 v 8 h -8 z M 40 64 L 48 64 A 8 8 0 0 0 40 56 z" fill="rgba(0,0,0,0.05)"/>
   </g>
 
-  <!-- Pequena silhueta do troféu acima do "26" -->
-  <g fill="#0a0a0f" opacity="0.92" transform="translate(29.5, 10.24)">
-    <rect x="0" y="0" width="5" height="6" rx="1"/>
-    <rect x="1.5" y="6" width="2" height="2.0999999999999996"/>
-    <rect x="-0.25" y="7.92" width="5.5" height="1.5" rx="0.25"/>
+  <!-- Troféu (silhueta, com taça e base) -->
+  <g fill="#0a0a0f" transform="translate(29, 8.32)">
+    <path d="M 0 0
+             h 6
+             v 4.4
+             a 3 3 0 0 1 -6 0
+             z" />
+    <rect x="1.92" y="4.4" width="2.16" height="1.6"/>
+    <rect x="-0.30000000000000004" y="6.24" width="6.6000000000000005" height="1.44" rx="0.30000000000000004"/>
   </g>
 
-  <!-- "26" central, inspirado na tipografia chunky da identidade -->
-  <text x="50%" y="39.68"
+  <!-- "26" central -->
+  <text x="50%" y="42.24"
         text-anchor="middle"
         dominant-baseline="middle"
         font-family="Inter Tight, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
         font-weight="900"
         font-size="33"
         fill="#0a0a0f"
-        letter-spacing="-1.98">
-    26
-  </text>
+        letter-spacing="-1.98">26</text>
+
+  <!-- Faixa arco-íris no rodapé do card -->
+  <g clip-path="url(#card)">
+    <rect x="0" y="59" width="9" height="5" fill="#ef4444"/><rect x="8" y="59" width="9" height="5" fill="#f97316"/><rect x="16" y="59" width="9" height="5" fill="#eab308"/><rect x="24" y="59" width="9" height="5" fill="#10b981"/><rect x="32" y="59" width="9" height="5" fill="#06b6d4"/><rect x="40" y="59" width="9" height="5" fill="#3b82f6"/><rect x="48" y="59" width="9" height="5" fill="#8b5cf6"/><rect x="56" y="59" width="9" height="5" fill="#ec4899"/>
+  </g>
 </svg>
