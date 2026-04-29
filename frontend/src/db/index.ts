@@ -1,8 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import type { CaptureMode } from '../lib/camera'
 
 const DB_NAME = 'album-copa-2026'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE = 'owned'
+const PENDING_STORE = 'pendingAnalysis'
 
 export interface OwnedSticker {
   id: string
@@ -11,10 +13,43 @@ export interface OwnedSticker {
   lastUpdatedAt: number
 }
 
+/**
+ * Análise da IA persistida pra sobreviver a refresh / navegação.
+ * Sempre só uma por vez (chave fixa 'current').
+ */
+export interface PendingAnalysisRecord {
+  id: 'current'
+  captureBlob: Blob
+  captureWidth: number
+  captureHeight: number
+  captureMode: CaptureMode
+  startedAt: number
+  status: 'running' | 'done' | 'error'
+  /** Resultado serializado quando status='done'. Sets/Maps viraram arrays. */
+  result?: SerializedResult
+  errorMessage?: string
+}
+
+export interface SerializedResult {
+  ids: { id: string; raw: string; confidence: number }[]
+  filledIds: string[]
+  counts: [string, number][]
+  rawText: string
+  durationMs: number
+  source: 'gemini' | 'tesseract'
+  team: string | null
+  page: number | null
+  mode: CaptureMode
+}
+
 interface Schema extends DBSchema {
   owned: {
     key: string
     value: OwnedSticker
+  }
+  pendingAnalysis: {
+    key: 'current'
+    value: PendingAnalysisRecord
   }
 }
 
@@ -23,9 +58,12 @@ let dbPromise: Promise<IDBPDatabase<Schema>> | null = null
 function getDB(): Promise<IDBPDatabase<Schema>> {
   if (!dbPromise) {
     dbPromise = openDB<Schema>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion) {
         if (!db.objectStoreNames.contains(STORE)) {
           db.createObjectStore(STORE, { keyPath: 'id' })
+        }
+        if (oldVersion < 2 && !db.objectStoreNames.contains(PENDING_STORE)) {
+          db.createObjectStore(PENDING_STORE, { keyPath: 'id' })
         }
       },
     })
@@ -132,6 +170,25 @@ export async function replaceAll(items: OwnedSticker[]): Promise<void> {
   notify()
 }
 
+// ---- Pending analysis ----
+
+export async function savePendingAnalysis(rec: PendingAnalysisRecord): Promise<void> {
+  const db = await getDB()
+  await db.put(PENDING_STORE, rec)
+  notifyPending()
+}
+
+export async function getPendingAnalysis(): Promise<PendingAnalysisRecord | undefined> {
+  const db = await getDB()
+  return db.get(PENDING_STORE, 'current')
+}
+
+export async function clearPendingAnalysis(): Promise<void> {
+  const db = await getDB()
+  await db.delete(PENDING_STORE, 'current')
+  notifyPending()
+}
+
 // ---- Notificação simples para hooks reagirem a mudanças ----
 const listeners = new Set<() => void>()
 function notify() {
@@ -140,4 +197,13 @@ function notify() {
 export function subscribe(cb: () => void): () => void {
   listeners.add(cb)
   return () => listeners.delete(cb)
+}
+
+const pendingListeners = new Set<() => void>()
+function notifyPending() {
+  for (const cb of pendingListeners) cb()
+}
+export function subscribePending(cb: () => void): () => void {
+  pendingListeners.add(cb)
+  return () => pendingListeners.delete(cb)
 }

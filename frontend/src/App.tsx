@@ -1,11 +1,12 @@
-import { useEffect } from 'react'
-import { Routes, Route, NavLink, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Routes, Route, NavLink, Link, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Capture from './pages/Capture'
 import Collection from './pages/Collection'
 import Review from './pages/Review'
 import Settings from './pages/Settings'
 import { prewarmBackend } from './lib/gemini'
+import { getPendingAnalysis, subscribePending, type PendingAnalysisRecord } from './db'
 
 export default function App() {
   useEffect(() => {
@@ -41,6 +42,8 @@ export default function App() {
         </div>
       </header>
 
+      <PendingAnalysisBanner />
+
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-24">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -59,6 +62,63 @@ export default function App() {
         </div>
       </nav>
     </div>
+  )
+}
+
+/**
+ * Banner sticky logo abaixo do header — aparece quando há análise da IA
+ * persistida e o usuário não está na tela de Review. Toque retoma.
+ */
+function PendingAnalysisBanner() {
+  const location = useLocation()
+  const [pending, setPending] = useState<PendingAnalysisRecord | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function refresh() {
+      const rec = await getPendingAnalysis()
+      if (!cancelled) setPending(rec ?? null)
+    }
+    void refresh()
+    const unsub = subscribePending(() => void refresh())
+    return () => {
+      cancelled = true
+      unsub()
+    }
+  }, [location.pathname])
+
+  if (!pending) return null
+  if (location.pathname === '/review') return null
+
+  const isRunning = pending.status === 'running'
+  const isError = pending.status === 'error'
+  const label = isError
+    ? 'Análise falhou — toque para retomar'
+    : isRunning
+      ? 'Análise em andamento — toque para retomar'
+      : 'Análise pronta — toque para revisar'
+  const tone = isError
+    ? 'border-red-500/40 bg-red-500/10 text-red-200'
+    : isRunning
+      ? 'border-fifa-blue/40 bg-fifa-blue/10 text-fifa-blue-soft'
+      : 'border-pitch-green/40 bg-pitch-green/10 text-pitch-green-soft'
+
+  return (
+    <Link
+      to="/review"
+      className={`mx-4 mt-3 flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold backdrop-blur ${tone}`}
+    >
+      <span className="grid h-2 w-2 place-items-center">
+        {isRunning && (
+          <span className="h-2 w-2 animate-pulse rounded-full bg-fifa-blue-soft" />
+        )}
+        {!isRunning && (
+          <span className={`h-2 w-2 rounded-full ${isError ? 'bg-red-300' : 'bg-pitch-green'}`} />
+        )}
+      </span>
+      <span className="flex-1 truncate">{label}</span>
+      <span className="text-[10px] opacity-70">→</span>
+    </Link>
   )
 }
 

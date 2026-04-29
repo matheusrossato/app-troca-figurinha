@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { CapturedImage, CaptureMode } from '../lib/camera'
 import { recognizeStickerIds, type DetectedId } from '../lib/ocr'
@@ -12,7 +12,15 @@ import {
   STICKERS_PER_TEAM,
   TEAMS_BY_CODE,
 } from '../data/album'
-import { bulkAdd, bulkIncrement } from '../db'
+import {
+  bulkAdd,
+  bulkIncrement,
+  clearPendingAnalysis,
+  getPendingAnalysis,
+  savePendingAnalysis,
+  type PendingAnalysisRecord,
+  type SerializedResult,
+} from '../db'
 import { useCollection } from '../hooks/useCollection'
 
 interface LocationState {
@@ -32,85 +40,155 @@ interface RecognitionResult {
   mode: CaptureMode
 }
 
-type Status = 'running' | 'done' | 'error'
+type Status = 'loading' | 'running' | 'done' | 'error' | 'empty'
 
 export default function Review() {
   const location = useLocation()
   const navigate = useNavigate()
-  const state = location.state as LocationState | null
-  const capture = state?.capture
-  const mode: CaptureMode = state?.mode ?? capture?.mode ?? 'page'
   const collection = useCollection()
 
-  const [status, setStatus] = useState<Status>('running')
+  const [capture, setCapture] = useState<CapturedImage | null>(null)
+  const [mode, setMode] = useState<CaptureMode>('page')
+  const [status, setStatus] = useState<Status>('loading')
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<RecognitionResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [geminiError, setGeminiError] = useState<string>('')
 
-  // Para mode='page': set de IDs marcados (toggle on/off)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  // Para mode='backs': contadores ajustáveis por ID antes de salvar
   const [counts, setCounts] = useState<Map<string, number>>(new Map())
 
-  useEffect(() => {
-    if (!capture) return
-    let cancelled = false
-    setStatus('running')
-    setProgress(0)
+  // Token de cancelamento — invalida análises anteriores quando uma nova começa.
+  const runTokenRef = useRef(0)
 
-    runRecognition(
-      capture.blob,
-      mode,
-      (p) => !cancelled && setProgress(p),
-      (err) => !cancelled && setGeminiError(err),
-    )
-      .then((r) => {
-        if (cancelled) return
-        setResult(r)
-        if (r.mode === 'backs') {
-          setCounts(new Map(r.counts))
-        } else {
-          // Upsert inteligente: pré-seleciona só os filled que AINDA não estão
-          // no banco. Os já-no-álbum ficam visíveis como "✓ no álbum" mas não
-          // re-marcados (evita virar repetidos).
-          const initial = new Set<string>()
-          const filledSource =
-            r.source === 'gemini' && r.filledIds.size > 0
-              ? r.filledIds
-              : new Set(r.ids.map((d) => d.id))
-          for (const id of filledSource) {
-            if (!collection.byId.has(id)) initial.add(id)
-          }
-          setSelected(initial)
-        }
+  // Inicialização: usa captura vinda do navigate OU restaura do storage.
+  // Roda uma única vez por montagem.
+  useEffect(() => {
+    let cancelled = false
+    const incoming = (location.state as LocationState | null)?.capture
+    const incomingMode =
+      (location.state as LocationState | null)?.mode ?? incoming?.mode ?? 'page'
+
+    ;(async () => {
+      if (incoming) {
+        setCapture(incoming)
+        setMode(incomingMode)
+        // Persiste a captura imediatamente — sobrevive a refresh / navegação.
+        await savePendingAnalysis({
+          id: 'current',
+          captureBlob: incoming.blob,
+          captureWidth: incoming.width,
+          captureHeight: incoming.height,
+          captureMode: incomingMode,
+          startedAt: Date.now(),
+          status: 'running',
+        })
+        // Limpa o state da rota pra não re-disparar se houver remontagem.
+        navigate('/review', { replace: true, state: null })
+        if (!cancelled) runAnalysis(incoming, incomingMode)
+        return
+      }
+
+      const pending = await getPendingAnalysis()
+      if (cancelled) return
+      if (!pending) {
+        setStatus('empty')
+        return
+      }
+
+      const restored = await reconstructCapture(pending)
+      if (cancelled) return
+      setCapture(restored)
+      setMode(pending.captureMode)
+
+      if (pending.status === 'done' && pending.result) {
+        const r = deserializeResult(pending.result)
+        applyResultToState(r)
         setStatus('done')
-      })
-      .catch((err: Error) => {
-        if (cancelled) return
-        setErrorMsg(err.message)
+      } else if (pending.status === 'error') {
+        setErrorMsg(pending.errorMessage ?? 'Erro desconhecido na análise.')
         setStatus('error')
-      })
+      } else {
+        runAnalysis(restored, pending.captureMode)
+      }
+    })()
 
     return () => {
       cancelled = true
+      runTokenRef.current++
     }
-  }, [capture, mode])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  if (!capture) {
-    return (
-      <div className="space-y-3">
-        <div className="rounded-xl border border-navy-outline/30 bg-navy-surface/40 px-4 py-12 text-center text-neutral-400">
-          Nenhuma captura para revisar.
-        </div>
-        <Link
-          to="/capture"
-          className="block rounded-xl bg-fifa-blue px-4 py-3 text-center font-medium text-white shadow-fifa-glow"
-        >
-          Ir para câmera
-        </Link>
-      </div>
+  function applyResultToState(r: RecognitionResult) {
+    setResult(r)
+    if (r.mode === 'backs') {
+      setCounts(new Map(r.counts))
+    } else {
+      const initial = new Set<string>()
+      const filledSource =
+        r.source === 'gemini' && r.filledIds.size > 0
+          ? r.filledIds
+          : new Set(r.ids.map((d) => d.id))
+      for (const id of filledSource) {
+        if (!collection.byId.has(id)) initial.add(id)
+      }
+      setSelected(initial)
+    }
+  }
+
+  function runAnalysis(cap: CapturedImage, m: CaptureMode) {
+    const token = ++runTokenRef.current
+    setStatus('running')
+    setProgress(0)
+    setGeminiError('')
+    setResult(null)
+    setSelected(new Set())
+    setCounts(new Map())
+
+    runRecognition(
+      cap.blob,
+      m,
+      (p) => token === runTokenRef.current && setProgress(p),
+      (err) => token === runTokenRef.current && setGeminiError(err),
     )
+      .then(async (r) => {
+        if (token !== runTokenRef.current) return
+        applyResultToState(r)
+        setStatus('done')
+        const current = await getPendingAnalysis()
+        if (current) {
+          await savePendingAnalysis({
+            ...current,
+            status: 'done',
+            result: serializeResult(r),
+            errorMessage: undefined,
+          })
+        }
+      })
+      .catch(async (err: Error) => {
+        if (token !== runTokenRef.current) return
+        setErrorMsg(err.message)
+        setStatus('error')
+        const current = await getPendingAnalysis()
+        if (current) {
+          await savePendingAnalysis({
+            ...current,
+            status: 'error',
+            errorMessage: err.message,
+          })
+        }
+      })
+  }
+
+  async function handleRetry() {
+    if (!capture) return
+    runAnalysis(capture, mode)
+  }
+
+  async function handleDiscard() {
+    await clearPendingAnalysis()
+    navigate('/capture', { replace: true })
   }
 
   function toggle(id: string) {
@@ -137,13 +215,39 @@ export default function Review() {
     const ids = Array.from(selected)
     if (ids.length === 0) return
     await bulkAdd(ids)
+    await clearPendingAnalysis()
     navigate('/')
   }
 
   async function handleConfirmBacks() {
     if (counts.size === 0) return
     await bulkIncrement(counts)
+    await clearPendingAnalysis()
     navigate('/')
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="glass-card rounded-xl px-4 py-12 text-center text-on-surface-variant">
+        Carregando análise…
+      </div>
+    )
+  }
+
+  if (status === 'empty' || !capture) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-navy-outline/30 bg-navy-surface/40 px-4 py-12 text-center text-on-surface-variant">
+          Nenhuma captura para revisar.
+        </div>
+        <Link
+          to="/capture"
+          className="block rounded-xl bg-fifa-blue px-4 py-3 text-center font-medium text-white shadow-fifa-glow"
+        >
+          Ir para câmera
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -155,9 +259,7 @@ export default function Review() {
       {status === 'running' && <ProgressBox progress={progress} mode={mode} />}
 
       {status === 'error' && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 backdrop-blur">
-          Falha no reconhecimento: {errorMsg}
-        </div>
+        <ErrorBox message={errorMsg} onRetry={handleRetry} onDiscard={handleDiscard} />
       )}
 
       {status === 'done' && result && result.mode === 'page' && (
@@ -183,6 +285,58 @@ export default function Review() {
     </div>
   )
 }
+
+// ---------- Persistência: serializa/deserializa Set/Map e reconstrói CapturedImage ----------
+
+function serializeResult(r: RecognitionResult): SerializedResult {
+  return {
+    ids: r.ids,
+    filledIds: Array.from(r.filledIds),
+    counts: Array.from(r.counts.entries()),
+    rawText: r.rawText,
+    durationMs: r.durationMs,
+    source: r.source,
+    team: r.team,
+    page: r.page,
+    mode: r.mode,
+  }
+}
+
+function deserializeResult(s: SerializedResult): RecognitionResult {
+  return {
+    ids: s.ids,
+    filledIds: new Set(s.filledIds),
+    counts: new Map(s.counts),
+    rawText: s.rawText,
+    durationMs: s.durationMs,
+    source: s.source,
+    team: s.team,
+    page: s.page,
+    mode: s.mode,
+  }
+}
+
+async function reconstructCapture(rec: PendingAnalysisRecord): Promise<CapturedImage> {
+  const dataUrl = await blobToDataUrl(rec.captureBlob)
+  return {
+    blob: rec.captureBlob,
+    width: rec.captureWidth,
+    height: rec.captureHeight,
+    dataUrl,
+    mode: rec.captureMode,
+  }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(r.result as string)
+    r.onerror = () => reject(r.error ?? new Error('readAsDataURL failed'))
+    r.readAsDataURL(blob)
+  })
+}
+
+// ---------- Recognition pipeline (gemini → tesseract fallback) ----------
 
 async function runRecognition(
   blob: Blob,
@@ -216,7 +370,6 @@ async function runRecognition(
     }
   }
 
-  // Fallback Tesseract — só faz sentido pro mode 'page' (não distingue duplicatas).
   const r = await recognizeStickerIds(blob, onProgress)
   return {
     ids: r.ids,
@@ -249,6 +402,38 @@ function ProgressBox({ progress, mode }: { progress: number; mode: CaptureMode }
   )
 }
 
+function ErrorBox({
+  message,
+  onRetry,
+  onDiscard,
+}: {
+  message: string
+  onRetry: () => void
+  onDiscard: () => void
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 backdrop-blur">
+        Falha no reconhecimento: {message}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={onDiscard}
+          className="glass-card rounded-xl px-4 py-3 font-medium text-on-surface transition active:scale-[0.99]"
+        >
+          Descartar e refazer
+        </button>
+        <button
+          onClick={onRetry}
+          className="rounded-xl bg-fifa-blue px-4 py-3 font-medium text-white shadow-fifa-glow transition active:scale-[0.99]"
+        >
+          Tentar de novo
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function expandExpectedIds(
   detected: DetectedId[],
   team: string | null,
@@ -256,15 +441,10 @@ function expandExpectedIds(
 ): string[] {
   const set = new Set<string>(detected.map((d) => d.id))
 
-  // Páginas de seleção têm sempre 20 IDs sequenciais (BRA1..BRA20),
-  // então expandimos o range cheio quando temos um team identificado.
   if (team && TEAMS_BY_CODE.has(team)) {
     for (let i = 1; i <= STICKERS_PER_TEAM; i++) set.add(`${team}${i}`)
   }
 
-  // FWC (intro + Museum) e Coca-Cola são heterogêneas: cada página tem
-  // um subset diferente. Se Gemini detectou e retornou a página, usamos
-  // o mapa por página pra preencher os esperados daquela página.
   if (page != null && detected.some((d) => d.id.startsWith(FWC_CODE))) {
     FWC_IDS_BY_PAGE.get(page)?.forEach((id) => set.add(id))
   }
@@ -273,7 +453,6 @@ function expandExpectedIds(
   }
 
   return Array.from(set).sort((a, b) => {
-    // Ordena por code primeiro, depois por número numericamente.
     const ma = a.match(/^([A-Z]+)(\d+)$/)
     const mb = b.match(/^([A-Z]+)(\d+)$/)
     if (!ma || !mb) return a.localeCompare(b)
