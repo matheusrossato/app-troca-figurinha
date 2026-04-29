@@ -37,14 +37,24 @@ export default function Capture() {
     stable: false,
   })
 
-  // Inicializa câmera no mount.
+  // Cleanup geral no unmount.
   useEffect(() => {
+    return () => {
+      stopStream(streamRef.current)
+      streamRef.current = null
+    }
+  }, [])
+
+  // Inicia câmera sempre que entrar em 'starting'. Dispara no mount inicial
+  // (status default = 'starting') e quando handleRetake seta de volta.
+  useEffect(() => {
+    if (status !== 'starting') return
+    if (!videoRef.current) return
+
     let cancelled = false
-    async function start() {
-      if (!videoRef.current) return
-      setStatus('starting')
+    ;(async () => {
       try {
-        const stream = await startRearCamera(videoRef.current)
+        const stream = await startRearCamera(videoRef.current!)
         if (cancelled) {
           stopStream(stream)
           return
@@ -52,6 +62,7 @@ export default function Capture() {
         streamRef.current = stream
         setStatus('live')
       } catch (err) {
+        if (cancelled) return
         const e = err as DOMException | Error
         if ((e as DOMException).name === 'NotAllowedError') setStatus('denied')
         else {
@@ -59,14 +70,12 @@ export default function Capture() {
           setErrorMsg(e.message || 'Não foi possível iniciar a câmera.')
         }
       }
-    }
-    start()
+    })()
+
     return () => {
       cancelled = true
-      stopStream(streamRef.current)
-      streamRef.current = null
     }
-  }, [])
+  }, [status])
 
   // Loop de medição de nitidez quando está "live" e não capturando.
   useEffect(() => {
@@ -120,18 +129,11 @@ export default function Capture() {
     }
   }
 
-  async function handleRetake() {
-    if (!videoRef.current) return
+  function handleRetake() {
+    // Volta o status pra 'starting'. O useEffect detecta a mudança,
+    // o componente re-renderiza com o <video> no DOM, e a câmera reinicia.
     setPreview(null)
     setStatus('starting')
-    try {
-      const stream = await startRearCamera(videoRef.current)
-      streamRef.current = stream
-      setStatus('live')
-    } catch (err) {
-      setStatus('error')
-      setErrorMsg((err as Error).message || 'Falha ao reiniciar câmera.')
-    }
   }
 
   function handleSubmit() {
