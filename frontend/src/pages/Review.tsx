@@ -4,10 +4,6 @@ import type { CapturedImage, CaptureMode } from '../lib/camera'
 import { recognizeStickerIds, type DetectedId } from '../lib/ocr'
 import { isGeminiConfigured, recognizeWithGemini } from '../lib/gemini'
 import {
-  INTRO_CODE,
-  INTRO_COUNT,
-  MUSEUM_CODE,
-  MUSEUM_COUNT,
   STICKERS_BY_ID,
   STICKERS_PER_TEAM,
   TEAMS_BY_CODE,
@@ -255,14 +251,13 @@ function expandExpectedIds(
 ): string[] {
   const set = new Set<string>(detected.map((d) => d.id))
 
+  // Páginas de seleção têm sempre 20 IDs sequenciais (BRA1..BRA20),
+  // então faz sentido expandir o range. Já FWC/FM são heterogêneas
+  // (cada página tem um subset diferente — ex: pág 1 da Intro tem só
+  // FWC1+FWC2 (taça) + FWC3 (mascotes) + FWC4 (slogan)) — confiamos
+  // no que o Gemini detectou pra essas seções.
   if (team && TEAMS_BY_CODE.has(team)) {
     for (let i = 1; i <= STICKERS_PER_TEAM; i++) set.add(`${team}${i}`)
-  }
-  if (detected.some((d) => d.id.startsWith(INTRO_CODE))) {
-    for (let i = 1; i <= INTRO_COUNT; i++) set.add(`${INTRO_CODE}${i}`)
-  }
-  if (detected.some((d) => d.id.startsWith(MUSEUM_CODE))) {
-    for (let i = 1; i <= MUSEUM_COUNT; i++) set.add(`${MUSEUM_CODE}${i}`)
   }
 
   return Array.from(set).sort((a, b) => {
