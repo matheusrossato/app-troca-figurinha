@@ -34,8 +34,8 @@ LOCALIZAÇÃO DO ID NO VERSO (regra absoluta — onde olhar):
 
 CÓDIGOS válidos:
 - 3 letras (código FIFA da seleção) + número 1 a 20. Exemplos: BRA1, BRA13, MEX7, QAT20, SCO1, AUT8.
-- FWC + número 1 a 9 (introdução, mascote, slogan, troféus).
-- FM + número 1 a 11 (FIFA Museum).
+- FWC + número 1 a 19 (introdução do álbum + FIFA Museum/History).
+- CC + número 1 a 14 (Coca-Cola — jogadores patrocinados).
 
 DICAS importantes (o usuário tipicamente espalha figurinhas na mesa):
 - As figurinhas podem estar em ÂNGULOS ROTACIONADOS (não alinhadas).
@@ -60,49 +60,85 @@ Onde "id" é o código canônico em maiúsculas, SEM espaços ou hífens. Se nã
 
 const PAGE_PROMPT = `Analise esta foto de uma página do álbum Panini FIFA World Cup 2026.
 
-ESTRUTURA FIXA do álbum (regra absoluta — memorize):
+============================================================
+ESTRUTURA DO ÁLBUM (993 figurinhas, 113 páginas)
+============================================================
+
+A. PÁGINAS DE SELEÇÃO (8-104, 48 seleções × 2 páginas)
 Cada seleção ocupa 2 páginas consecutivas (esquerda par + direita ímpar) com 20 figurinhas numeradas 1 a 20:
-- Slot 1 = ESCUDO da seleção (figurinha metalizada/holográfica). Sempre no topo da página ESQUERDA (par).
-- Slots 2 a 10 = jogadores, distribuídos no restante da página ESQUERDA.
-- Slots 11 e 12 = jogadores no INÍCIO da página DIREITA (na mesma linha que a foto da equipe, à ESQUERDA dela).
-- Slot 13 = FOTO DA EQUIPE / nome do país em VÁRIOS IDIOMAS. Âncora visual da página direita. Pode estar vazio (mostrando só "BRA 13" ou similar) ou colado (mostrando foto da equipe e textos como "Brazil | Brasil | Brésil | Brasilien | Brasile | Brazylia | Бразилия").
-- Slots 14 a 20 = jogadores no RESTANTE da página DIREITA (DEPOIS da foto da equipe).
+- Slot 1 = ESCUDO da seleção (metalizado/holográfico). Topo da página ESQUERDA (par).
+- Slots 2-10 = jogadores, restante da página ESQUERDA.
+- Slots 11-12 = jogadores no INÍCIO da página DIREITA (à esquerda da foto da equipe).
+- Slot 13 = FOTO DA EQUIPE / nome do país em vários idiomas (âncora visual da página direita).
+- Slots 14-20 = jogadores DEPOIS da foto da equipe.
 
-REGRA DE NUMERAÇÃO (para evitar erros comuns):
-- Se a foto contém o ESCUDO no canto, é página ESQUERDA → numere 1 a 10.
-- Se a foto contém a FOTO DA EQUIPE (ou seu espaço vazio rotulado "XXX 13"), é página DIREITA → os 2 jogadores ANTES dela são 11 e 12, e os DEPOIS são 14 a 20. NUNCA numere a partir de 1 numa página direita.
-- Se a foto contém AMBAS, numere 1 a 20.
+REGRA DE NUMERAÇÃO:
+- Foto contém ESCUDO no canto → página ESQUERDA → numere 1 a 10.
+- Foto contém FOTO DA EQUIPE (ou slot vazio "XXX 13") → página DIREITA → 2 jogadores ANTES dela são 11 e 12, DEPOIS são 14-20. NUNCA numere a partir de 1 numa página direita.
+- Foto contém AMBAS → numere 1 a 20.
 
-CÓDIGOS válidos:
-- 3 letras (código FIFA da seleção) + número 1 a 20. Exemplos: BRA1, BRA13, MEX7, QAT20, SCO1.
-- FWC + número 1 a 9 (introdução: troféus, bola, mascotes, slogan, etc.).
-- FM + número 1 a 11 (FIFA Museum / campeões anteriores).
+B. PÁGINAS FWC — INTRODUÇÃO (págs 1-3, 8 figurinhas)
+Layout heterogêneo, MEMORIZE:
+- Pág 1: FWC1 + FWC2 (taça da Copa, formando UMA única imagem grande sobre 2 slots) | FWC3 (mascotes oficiais) | FWC4 (slogan oficial)
+- Pág 2: FWC5 (Trionda — bola oficial) | FWC6 (taça com fundo vermelho/Canadá)
+- Pág 3: FWC7 (taça fundo verde) | FWC8 (taça fundo azul claro)
 
-VAZIO vs COLADO (regra importante):
-- Slot VAZIO: mostra o código impresso no espaço (ex: "MEX 7", "FWC 3") + texto descritivo (nome do jogador, "Mascotes Oficiais", "Slogan Oficial", etc.).
-- Slot COLADO com figurinha de jogador: mostra a foto do jogador, escudo da seleção. Geralmente é possível inferir o ID pelo nome impresso embaixo OU pela posição relativa.
-- Slot COLADO com figurinha FWC (introdução): mostra APENAS a imagem temática (troféu metalizado, bola, mascote oficial, slogan, escudo de host) — SEM o código "FWC X" visível. Você precisa INFERIR o FWC pela imagem e contexto (texto ao redor que sobrou da página).
+REGRA CRÍTICA — TAÇA DUPLA: FWC1 e FWC2 NÃO são figurinhas separadas visualmente. São DUAS figurinhas físicas que, coladas lado-a-lado, formam UMA única imagem grande da taça da Copa 2026. Quando você vê esse pôster da taça grande COLADO na pág 1, retorne SEMPRE AMBAS: {"id":"FWC1","filled":true} E {"id":"FWC2","filled":true}. Nunca retorne só FWC1.
 
-Identifique TODOS os slots da página (vazios e colados). Para FWC colados sem código visível, retorne o ID que a imagem sugere (ex: figurinha do troféu = FWC1 ou FWC2; figurinha de mascote = FWC dos mascotes). Se o slot está claramente colado mas você não consegue inferir o número exato, AINDA ASSIM inclua a entrada com o ID mais provável e filled=true.
+C. PÁGINAS FWC — FIFA MUSEUM/HISTORY (págs 106-109, 11 figurinhas: FWC9-FWC19)
+Cada uma é a foto da equipe campeã de uma Copa anterior + hologram dourado/colorido.
+Layout exato:
+- Pág 106: FWC9 (Itália 1934, campeã) | FWC10 (Uruguai 1950, campeã)
+- Pág 107: FWC11 (Alemanha Ocidental 1954) | FWC12 (Brasil 1962) | FWC13 (Alemanha Ocidental 1974)
+- Pág 108: FWC14 (Argentina 1986) | FWC15 (Brasil 1994)
+- Pág 109: FWC16 (Brasil 2002) | FWC17 (Itália 2006) | FWC18 (Alemanha 2014) | FWC19 (Argentina 2022)
 
-Retorne APENAS um objeto JSON SEM markdown e SEM comentário, com este schema exato:
+ATENÇÃO — DECORAÇÕES vs FIGURINHAS na seção Museum:
+Nessas páginas há OUTRAS fotos de equipes campeãs com efeito hologram que NÃO são figurinhas — são impressões fixas decorativas (Uruguai 1930, Itália 1938, Brasil 1958, Inglaterra 1966, Brasil 1970, Argentina 1978, Itália 1982, Alemanha 1990, França 1998, Espanha 2010, França 2018). Essas NÃO devem aparecer no resultado, mesmo que o efeito visual pareça figurinha. Só os FWC9-FWC19 listados acima são figurinhas reais.
+
+D. PÁGINAS COCA-COLA (págs 112-113, 14 figurinhas: CC1-CC14)
+Layout (jogadores patrocinados pela Coca-Cola, fundo vermelho com curva branca):
+- Pág 112: CC1 (Lamine Yamal/Espanha) | CC2 (Joshua Kimmich/Alemanha) | CC3 (Harry Kane/Inglaterra) | CC4 (Santiago Giménez/México) | CC5 (Joško Gvardiol/Croácia) | CC6 (Federico Valverde/Uruguai)
+- Pág 113 (contracapa): CC7 (Jefferson Lerma/Colômbia) | CC8 (Enner Valencia/Equador) | CC9 (Gabriel Magalhães/Brasil) | CC10 (Virgil van Dijk/Holanda) | CC11 (Alphonso Davies/Canadá) | CC12 (Emiliano Martínez/Argentina) | CC13 (Raúl Jiménez/México) | CC14 (Lautaro Martínez/Argentina)
+
+============================================================
+CÓDIGOS VÁLIDOS (qualquer outro = inválido, omita)
+============================================================
+- 3 letras FIFA + número 1-20 (seleções: BRA1, BRA13, MEX7, QAT20, SCO1).
+- FWC + número 1-19 (introdução + Museum). NÃO existe FWC ≥ 20.
+- CC + número 1-14 (Coca-Cola). NÃO existe CC ≥ 15.
+- NÃO EXISTE prefixo "FM" — se ler "FM N" no álbum, ignore (foi convenção antiga).
+
+============================================================
+VAZIO vs COLADO
+============================================================
+- Slot VAZIO: mostra o código impresso (ex: "MEX 7", "FWC 3", "CC 5") + texto descritivo (nome do jogador, "Mascotes Oficiais", "Slogan Oficial", etc.).
+- Slot COLADO de jogador: foto do jogador + escudo. Inferir ID pelo nome embaixo ou posição.
+- Slot COLADO FWC/CC: imagem temática + hologram, geralmente SEM código visível. Inferir pela imagem e pela posição relativa na página, usando o layout acima como referência.
+
+Identifique TODOS os slots da página (vazios E colados). Quando colado sem código visível, retorne o ID mais provável + filled=true.
+
+============================================================
+SCHEMA DE RESPOSTA (JSON puro, sem markdown)
+============================================================
 {
   "ids": [
-    {"id": "BRA1",  "filled": false},
-    {"id": "BRA11", "filled": true},
-    {"id": "BRA13", "filled": true}
+    {"id": "FWC1", "filled": true},
+    {"id": "FWC2", "filled": true},
+    {"id": "FWC3", "filled": false},
+    {"id": "FWC4", "filled": false}
   ],
-  "team": "BRA",
-  "page": 25
+  "team": null,
+  "page": 1
 }
 
-Onde:
-- "id": código canônico em maiúsculas, SEM espaços ou hífens.
-- "filled": true se a figurinha estiver fisicamente colada (foto visível); false se o espaço estiver vazio.
-- "team": código de 3 letras da seleção principal, ou null se for FWC/FIFA Museum.
-- "page": número da página impresso no canto da folha (texto pequeno tipo "8" ou "25"), ou null se não visível.
+Campos:
+- "id": código canônico em maiúsculas, SEM espaços/hífens.
+- "filled": true se a figurinha está fisicamente colada (imagem visível); false se vazio.
+- "team": código de 3 letras da seleção principal, OU null para FWC/CC.
+- "page": número impresso no canto da página, OU null se não visível.
 
-Inclua TODOS os códigos visíveis. Se em dúvida sobre filled, chute false.`
+Inclua TODOS os códigos visíveis. Em dúvida sobre filled, chute false.`
 
 function promptFor(mode) {
   return mode === 'backs' ? BACKS_PROMPT : PAGE_PROMPT
