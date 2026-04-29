@@ -70,6 +70,45 @@ export const INTRO_CODE = 'FWC'
 export const MUSEUM_CODE = 'FM'
 
 /**
+ * Layout da seção Introduction confirmado pelo usuário em 2026-04-29.
+ * Cada página tem um conjunto heterogêneo de figurinhas (não é range
+ * sequencial como nas seleções). FWC9 ainda não mapeado.
+ */
+interface IntroSlot {
+  id: string
+  page: number
+  label: string
+}
+export const INTRO_LAYOUT: IntroSlot[] = [
+  { id: 'FWC1', page: 1, label: 'Taça Copa 2026 (esq.)' },
+  { id: 'FWC2', page: 1, label: 'Taça Copa 2026 (dir.)' },
+  { id: 'FWC3', page: 1, label: 'Mascotes Oficiais' },
+  { id: 'FWC4', page: 1, label: 'Slogan Oficial' },
+  { id: 'FWC5', page: 2, label: 'Trionda — bola oficial' },
+  { id: 'FWC6', page: 2, label: 'Taça (fundo vermelho — Canadá)' },
+  { id: 'FWC7', page: 3, label: 'Taça (fundo verde)' },
+  { id: 'FWC8', page: 3, label: 'Taça (fundo azul claro)' },
+  { id: 'FWC9', page: undefined as unknown as number, label: 'Introdução 9' },
+]
+
+/** Mapa página → IDs da seção Intro nessa página. */
+export const INTRO_IDS_BY_PAGE: Map<number, string[]> = (() => {
+  const m = new Map<number, string[]>()
+  for (const slot of INTRO_LAYOUT) {
+    if (slot.page == null) continue
+    const arr = m.get(slot.page) ?? []
+    arr.push(slot.id)
+    m.set(slot.page, arr)
+  }
+  return m
+})()
+
+const INTRO_LABEL_BY_ID = new Map(INTRO_LAYOUT.map((s) => [s.id, s.label]))
+const INTRO_PAGE_BY_ID = new Map(
+  INTRO_LAYOUT.filter((s) => s.page != null).map((s) => [s.id, s.page]),
+)
+
+/**
  * Lista oficial das 48 seleções na ordem do álbum impresso, agrupadas
  * em A..L (4 por grupo). Ordem e códigos confirmados a partir do índice
  * fotografado pelo usuário em 2026-04-28.
@@ -159,14 +198,16 @@ export function buildAllStickers(): Sticker[] {
   const all: Sticker[] = []
 
   for (let i = 1; i <= INTRO_COUNT; i++) {
+    const id = `${INTRO_CODE}${i}`
     all.push({
-      id: `${INTRO_CODE}${i}`,
+      id,
       section: 'intro',
       code: INTRO_CODE,
       index: i,
       isSpecial: true,
-      label: `Introdução ${i}`,
+      label: INTRO_LABEL_BY_ID.get(id) ?? `Introdução ${i}`,
       slot: 'intro',
+      page: INTRO_PAGE_BY_ID.get(id),
     })
   }
 

@@ -4,6 +4,8 @@ import type { CapturedImage, CaptureMode } from '../lib/camera'
 import { recognizeStickerIds, type DetectedId } from '../lib/ocr'
 import { isGeminiConfigured, recognizeWithGemini } from '../lib/gemini'
 import {
+  INTRO_CODE,
+  INTRO_IDS_BY_PAGE,
   STICKERS_BY_ID,
   STICKERS_PER_TEAM,
   TEAMS_BY_CODE,
@@ -248,16 +250,22 @@ function ProgressBox({ progress, mode }: { progress: number; mode: CaptureMode }
 function expandExpectedIds(
   detected: DetectedId[],
   team: string | null,
+  page: number | null,
 ): string[] {
   const set = new Set<string>(detected.map((d) => d.id))
 
   // Páginas de seleção têm sempre 20 IDs sequenciais (BRA1..BRA20),
-  // então faz sentido expandir o range. Já FWC/FM são heterogêneas
-  // (cada página tem um subset diferente — ex: pág 1 da Intro tem só
-  // FWC1+FWC2 (taça) + FWC3 (mascotes) + FWC4 (slogan)) — confiamos
-  // no que o Gemini detectou pra essas seções.
+  // então expandimos o range cheio quando temos um team identificado.
   if (team && TEAMS_BY_CODE.has(team)) {
     for (let i = 1; i <= STICKERS_PER_TEAM; i++) set.add(`${team}${i}`)
+  }
+
+  // Páginas da seção Intro são heterogêneas (cada uma tem um subset
+  // diferente). Se Gemini detectou alguma FWC E retornou uma página,
+  // usa o INTRO_IDS_BY_PAGE pra preencher os esperados daquela página.
+  if (page != null && detected.some((d) => d.id.startsWith(INTRO_CODE))) {
+    const ids = INTRO_IDS_BY_PAGE.get(page)
+    if (ids) ids.forEach((id) => set.add(id))
   }
 
   return Array.from(set).sort((a, b) => {
@@ -290,7 +298,7 @@ function PageResultPanel({
   }
 
   const team = result.team ? TEAMS_BY_CODE.get(result.team) : null
-  const allIds = expandExpectedIds(result.ids, result.team)
+  const allIds = expandExpectedIds(result.ids, result.team, result.page)
   const detectedSet = new Set(result.ids.map((d) => d.id))
   const expectedNotDetected = allIds.filter((id) => !detectedSet.has(id))
 
