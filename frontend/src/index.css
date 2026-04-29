@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  /* Paleta oficial FIFA World Cup 2026: dourado como destaque, preto/branco
-   * como base. Sistema flexível com cores das 16 cidades-sede. */
+  /* Paleta oficial FIFA World Cup 2026: dourado como destaque + arco-íris
+   * das cidades-sede. Mantida como acento sobre a base navy abaixo. */
   --color-gold-50:  #fffaeb;
   --color-gold-100: #fef0c7;
   --color-gold-300: #fcd34d;
@@ -28,14 +28,42 @@
   --color-brand-600: #d4a017;
   --color-brand-700: #a87a0e;
 
-  --font-display: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* === Sistema "High-Tech Glassmorphism" (proposta Stitch) ===
+   * Base navy (estádio à noite) + azul FIFA + verde neon + dourado troféu.
+   * Coexiste com gold-* / brand-* / fwc-rainbow acima. */
+  --color-navy-bg:                  #05122d;
+  --color-navy-surface-lowest:      #010d28;
+  --color-navy-surface:             #0d1b36;
+  --color-navy-surface-2:           #121f3a;
+  --color-navy-surface-3:           #1d2945;
+  --color-navy-surface-bright:      #2c3955;
+  --color-navy-outline:             #414754;
+  --color-navy-outline-strong:      #8b91a0;
+
+  /* Texto sobre navy */
+  --color-on-surface:               #d9e2ff;
+  --color-on-surface-variant:       #c0c6d6;
+
+  /* Primário FIFA Blue */
+  --color-fifa-blue:                #0a84ff;
+  --color-fifa-blue-soft:           #aac7ff;
+  --color-fifa-blue-strong:         #3e90ff;
+
+  /* Secundário Pitch Green */
+  --color-pitch-green:              #00f260;
+  --color-pitch-green-soft:         #b9ffb9;
+
+  /* Terciário Trophy Gold (já temos em gold-*, alias semântico) */
+  --color-trophy-gold:              #f9d423;
+
+  --font-display: "Lexend", "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 html, body, #root {
   height: 100%;
   margin: 0;
-  background: #0a0a0f;
-  color: #f5f5f5;
+  background: #05122d;
+  color: #d9e2ff;
   font-family: var(--font-display);
   -webkit-font-smoothing: antialiased;
 }
@@ -74,4 +102,32 @@ html, body, #root {
     0 1px 0 0 rgba(255, 255, 255, 0.08) inset,
     0 8px 24px -8px rgba(245, 184, 0, 0.55),
     0 4px 8px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* Glow azul FIFA pros CTAs do design system Stitch */
+.shadow-fifa-glow {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.10) inset,
+    0 0 20px -2px rgba(10, 132, 255, 0.45),
+    0 8px 24px -8px rgba(10, 132, 255, 0.55);
+}
+
+/* Glow verde pros estados de sucesso/scan */
+.shadow-pitch-glow {
+  box-shadow:
+    0 0 18px -2px rgba(0, 242, 96, 0.45),
+    0 4px 14px -4px rgba(0, 242, 96, 0.35);
+}
+
+/* Card "glass" — superfície translúcida + blur (Level 1 do design system) */
+.glass-card {
+  background-color: color-mix(in srgb, #121f3a 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, #8b91a0 18%, transparent);
+}
+
+/* Gradient holográfico (azul→verde) pros CTAs principais */
+.bg-fifa-pitch-gradient {
+  background-image: linear-gradient(135deg, #0a84ff 0%, #00f260 100%);
 }

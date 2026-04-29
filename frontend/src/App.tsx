@@ -13,15 +13,15 @@ export default function App() {
   }, [])
 
   return (
-    <div className="flex min-h-full flex-col bg-[#0a0a0f]">
-      <header className="sticky top-0 z-10 border-b border-neutral-900 bg-[#0a0a0f]/95 backdrop-blur">
+    <div className="flex min-h-full flex-col bg-navy-bg">
+      <header className="sticky top-0 z-10 border-b border-navy-outline/30 bg-navy-bg/85 backdrop-blur-xl">
         <div className="bg-fwc-rainbow h-1.5 w-full" />
         <div className="flex items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2.5">
-            <Logo26 className="h-8 w-8 shrink-0" />
+            <img src="/logo-meu-album.png" alt="Meu Álbum 2026" className="h-10 w-10 shrink-0 rounded-lg" />
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold-400">
-                Álbum
+                Meu Álbum
               </span>
               <span className="text-base font-bold tracking-tight text-white">
                 Copa 2026
@@ -31,7 +31,7 @@ export default function App() {
           <Link
             to="/settings"
             aria-label="Ajustes"
-            className="grid h-9 w-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-neutral-900 hover:text-gold-300"
+            className="grid h-9 w-9 place-items-center rounded-lg text-on-surface-variant transition hover:bg-navy-surface hover:text-gold-300"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
@@ -51,7 +51,7 @@ export default function App() {
         </Routes>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-neutral-900 bg-[#0a0a0f]/95 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-navy-outline/30 bg-navy-bg/90 backdrop-blur-xl">
         <div className="grid grid-cols-3">
           <TabLink to="/" label="Início" />
           <TabLink to="/capture" label="Escanear" />
@@ -69,7 +69,7 @@ function TabLink({ to, label }: { to: string; label: string }) {
       end
       className={({ isActive }) =>
         `relative py-3 text-center text-sm font-semibold transition ${
-          isActive ? 'text-gold-400' : 'text-neutral-500 hover:text-neutral-200'
+          isActive ? 'text-gold-400' : 'text-on-surface-variant hover:text-on-surface'
         }`
       }
     >
@@ -82,45 +82,5 @@ function TabLink({ to, label }: { to: string; label: string }) {
         </>
       )}
     </NavLink>
-  )
-}
-
-/**
- * Logo "26" inspirado no estilo da identidade da Copa: número grosso e
- * cantos arredondados, fundo dourado com troféu silhueta. Não reproduz a
- * marca oficial — só evoca o visual.
- */
-function Logo26({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 64 64" className={className} aria-label="26">
-      <defs>
-        <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fcd34d" />
-          <stop offset="55%" stopColor="#f5b800" />
-          <stop offset="100%" stopColor="#a87a0e" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#goldGrad)" />
-      <rect x="2" y="2" width="60" height="60" rx="14" fill="black" opacity="0.08" />
-      <text
-        x="50%"
-        y="56%"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontFamily="Inter Tight, system-ui, sans-serif"
-        fontWeight="900"
-        fontSize="34"
-        fill="#0a0a0f"
-        letterSpacing="-2"
-      >
-        26
-      </text>
-      {/* Pequeno troféu acima do "26" */}
-      <path
-        d="M28 12 h8 v3 h2 v3 a3 3 0 0 1 -3 3 h-1 v2 h-4 v-2 h-1 a3 3 0 0 1 -3 -3 v-3 h2 z"
-        fill="#0a0a0f"
-        opacity="0.85"
-      />
-    </svg>
   )
 }
