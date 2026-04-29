@@ -20,35 +20,46 @@ const model = genAI.getGenerativeModel({
 })
 
 const PROMPT = `Analise esta foto de uma página do álbum Panini FIFA World Cup 2026.
-Identifique TODOS os códigos de figurinha visíveis (em espaços vazios ou em figurinhas coladas).
 
-Formato canônico dos IDs (SEM espaços, SEM hífen):
+ESTRUTURA FIXA do álbum (regra absoluta — memorize):
+Cada seleção ocupa 2 páginas consecutivas (esquerda par + direita ímpar) com 20 figurinhas numeradas 1 a 20:
+- Slot 1 = ESCUDO da seleção (figurinha metalizada/holográfica). Sempre no topo da página ESQUERDA (par).
+- Slots 2 a 10 = jogadores, distribuídos no restante da página ESQUERDA.
+- Slots 11 e 12 = jogadores no INÍCIO da página DIREITA (na mesma linha que a foto da equipe, à ESQUERDA dela).
+- Slot 13 = FOTO DA EQUIPE / nome do país em VÁRIOS IDIOMAS. Âncora visual da página direita. Pode estar vazio (mostrando só "BRA 13" ou similar) ou colado (mostrando foto da equipe e textos como "Brazil | Brasil | Brésil | Brasilien | Brasile | Brazylia | Бразилия").
+- Slots 14 a 20 = jogadores no RESTANTE da página DIREITA (DEPOIS da foto da equipe).
+
+REGRA DE NUMERAÇÃO (para evitar erros comuns):
+- Se a foto contém o ESCUDO no canto, é página ESQUERDA → numere 1 a 10.
+- Se a foto contém a FOTO DA EQUIPE (ou seu espaço vazio rotulado "XXX 13"), é página DIREITA → os 2 jogadores ANTES dela são 11 e 12, e os DEPOIS são 14 a 20. NUNCA numere a partir de 1 numa página direita.
+- Se a foto contém AMBAS, numere 1 a 20.
+
+CÓDIGOS válidos:
 - 3 letras (código FIFA da seleção) + número 1 a 20. Exemplos: BRA1, BRA13, MEX7, QAT20, SCO1.
 - FWC + número 1 a 9 (introdução, mascote, slogan, troféus, bola).
-- FM + número 1 a 11 (FIFA Museum, campeões anteriores).
+- FM + número 1 a 11 (FIFA Museum / campeões anteriores).
 
-Layout típico de uma página de seleção:
-- Slot 1: escudo (figurinha metalizada/holográfica). Quando vazio, mostra apenas "MEX 1" ou similar.
-- Slot 13: foto da equipe.
-- Slots 2-12 e 14-20: jogadores. Quando vazio, mostra "MEX 7" + nome do jogador.
+Quando o espaço estiver vazio, o álbum imprime o código e (em slots de jogador) o nome do jogador.
+Quando estiver colado, vê-se a foto da figurinha (jogador, escudo holográfico ou foto da equipe).
 
 Retorne APENAS um objeto JSON SEM markdown e SEM comentário, com este schema exato:
 {
   "ids": [
     {"id": "BRA1",  "filled": false},
-    {"id": "BRA2",  "filled": true}
+    {"id": "BRA11", "filled": true},
+    {"id": "BRA13", "filled": true}
   ],
   "team": "BRA",
-  "page": 24
+  "page": 25
 }
 
 Onde:
-- "id": código canônico em maiúsculas, sem espaços ou hífens.
-- "filled": true se a figurinha estiver fisicamente colada (com foto/imagem visível); false se o espaço estiver vazio (mostrando só o código e o nome do jogador).
-- "team": código de 3 letras da seleção principal da página, ou null se for página de FWC/FIFA Museum.
-- "page": número da página impresso no canto da folha, ou null se não visível.
+- "id": código canônico em maiúsculas, SEM espaços ou hífens.
+- "filled": true se a figurinha estiver fisicamente colada (foto visível); false se o espaço estiver vazio.
+- "team": código de 3 letras da seleção principal, ou null se for FWC/FIFA Museum.
+- "page": número da página impresso no canto da folha (texto pequeno tipo "8" ou "25"), ou null se não visível.
 
-Inclua TODOS os códigos visíveis (esperamos 20 IDs em uma página dupla de seleção, ou menos numa página parcial). Se não tiver certeza absoluta de "filled", chute false.`
+Inclua TODOS os códigos visíveis. Se em dúvida sobre filled, chute false.`
 
 const app = express()
 app.use(express.json({ limit: '12mb' }))
