@@ -97,6 +97,26 @@ export async function bulkAdd(ids: string[]): Promise<void> {
   notify()
 }
 
+/** Soma `delta` ao count de cada id. Cria se não existir. */
+export async function bulkIncrement(deltas: Map<string, number>): Promise<void> {
+  if (deltas.size === 0) return
+  const db = await getDB()
+  const tx = db.transaction(STORE, 'readwrite')
+  const now = Date.now()
+  await Promise.all(
+    Array.from(deltas.entries()).map(async ([id, delta]) => {
+      if (delta <= 0) return
+      const existing = await tx.store.get(id)
+      const next: OwnedSticker = existing
+        ? { ...existing, count: existing.count + delta, lastUpdatedAt: now }
+        : { id, count: delta, firstAddedAt: now, lastUpdatedAt: now }
+      await tx.store.put(next)
+    }),
+  )
+  await tx.done
+  notify()
+}
+
 export async function clearAll(): Promise<void> {
   const db = await getDB()
   await db.clear(STORE)

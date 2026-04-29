@@ -19,7 +19,41 @@ const model = genAI.getGenerativeModel({
   },
 })
 
-const PROMPT = `Analise esta foto de uma página do álbum Panini FIFA World Cup 2026.
+const BACKS_PROMPT = `Esta foto mostra figurinhas do álbum Panini FIFA World Cup 2026 com o VERSO virado para cima.
+
+LOCALIZAÇÃO DO ID NO VERSO (regra absoluta — onde olhar):
+- No CANTO SUPERIOR DIREITO de cada verso há um BADGE/PILL CINZA com este formato:
+    "FIFA WORLD CUP 2026 | XXX N"
+- Apenas o "XXX N" do final do badge é o ID da figurinha (ex: "AUT 8", "BRA 7", "FWC 3").
+- IGNORE o resto do verso: logo da FIFA, texto legal em português/espanhol, "OFFICIAL LICENSED PRODUCT", marca Panini, número de série pequeno na lateral.
+
+CÓDIGOS válidos:
+- 3 letras (código FIFA da seleção) + número 1 a 20. Exemplos: BRA1, BRA13, MEX7, QAT20, SCO1, AUT8.
+- FWC + número 1 a 9 (introdução, mascote, slogan, troféus).
+- FM + número 1 a 11 (FIFA Museum).
+
+DICAS importantes (o usuário tipicamente espalha figurinhas na mesa):
+- As figurinhas podem estar em ÂNGULOS ROTACIONADOS (não alinhadas).
+- Algumas podem estar PARCIALMENTE SOBREPOSTAS — leia o badge se ele estiver visível, mesmo que parte da figurinha esteja coberta.
+- Pode haver DUPLICATAS reais (mesmo ID em duas figurinhas diferentes da mesma foto). Inclua todas — uma entrada por figurinha física.
+- Se um badge estiver totalmente coberto/ilegível, NÃO chute; omita.
+
+Liste TODOS os badges visíveis na foto, INCLUINDO DUPLICATAS. Se você vê "AUT 4" em duas figurinhas diferentes, retorne "AUT4" duas vezes no array. O número de entradas no array deve ser igual ao número de figurinhas físicas que você consegue ler o badge.
+
+Retorne APENAS um objeto JSON SEM markdown e SEM comentários:
+{
+  "ids": [
+    {"id": "BRA7"},
+    {"id": "BRA7"},
+    {"id": "BRA7"},
+    {"id": "ARG12"},
+    {"id": "AUT8"}
+  ]
+}
+
+Onde "id" é o código canônico em maiúsculas, SEM espaços ou hífens. Se não tiver certeza absoluta de um código, omita.`
+
+const PAGE_PROMPT = `Analise esta foto de uma página do álbum Panini FIFA World Cup 2026.
 
 ESTRUTURA FIXA do álbum (regra absoluta — memorize):
 Cada seleção ocupa 2 páginas consecutivas (esquerda par + direita ímpar) com 20 figurinhas numeradas 1 a 20:
@@ -61,6 +95,10 @@ Onde:
 
 Inclua TODOS os códigos visíveis. Se em dúvida sobre filled, chute false.`
 
+function promptFor(mode) {
+  return mode === 'backs' ? BACKS_PROMPT : PAGE_PROMPT
+}
+
 const app = express()
 app.use(express.json({ limit: '12mb' }))
 
@@ -96,7 +134,7 @@ function parseGeminiJson(text) {
 app.post('/recognize', async (req, res) => {
   if (!checkToken(req, res)) return
 
-  const { imageBase64, mimeType } = req.body || {}
+  const { imageBase64, mimeType, mode } = req.body || {}
   if (!imageBase64 || typeof imageBase64 !== 'string') {
     return res.status(400).json({ error: 'imageBase64 (base64 string) required' })
   }
@@ -107,7 +145,7 @@ app.post('/recognize', async (req, res) => {
   const start = Date.now()
   try {
     const result = await model.generateContent([
-      PROMPT,
+      promptFor(mode),
       { inlineData: { data: imageBase64, mimeType: mimeType || 'image/jpeg' } },
     ])
     const text = result.response.text()
@@ -136,7 +174,7 @@ app.post('/recognize', async (req, res) => {
 app.post('/recognize-stream', async (req, res) => {
   if (!checkToken(req, res)) return
 
-  const { imageBase64, mimeType } = req.body || {}
+  const { imageBase64, mimeType, mode } = req.body || {}
   if (!imageBase64 || typeof imageBase64 !== 'string') {
     return res.status(400).json({ error: 'imageBase64 (base64 string) required' })
   }
@@ -147,14 +185,13 @@ app.post('/recognize-stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
   res.setHeader('Cache-Control', 'no-store')
   res.setHeader('X-Accel-Buffering', 'no')
-  // dispara cabeçalhos imediatamente pra navegador começar a ler
   res.flushHeaders?.()
 
   const start = Date.now()
   let raw = ''
   try {
     const stream = await model.generateContentStream([
-      PROMPT,
+      promptFor(mode),
       { inlineData: { data: imageBase64, mimeType: mimeType || 'image/jpeg' } },
     ])
     for await (const chunk of stream.stream) {

@@ -1,4 +1,4 @@
-export type CaptureMode = 'page' | 'single'
+export type CaptureMode = 'page' | 'backs'
 
 export interface CapturedImage {
   blob: Blob

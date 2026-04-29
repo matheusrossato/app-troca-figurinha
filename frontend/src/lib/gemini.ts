@@ -1,17 +1,22 @@
 import { normalizeStickerId, STICKERS_BY_ID } from '../data/album'
 import type { DetectedId } from './ocr'
+import type { CaptureMode } from './camera'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL as string | undefined
 const CLIENT_TOKEN = import.meta.env.VITE_CLIENT_TOKEN as string | undefined
 
 export interface GeminiResult {
+  /** IDs únicos detectados (já validados contra catálogo). */
   ids: DetectedId[]
-  /** IDs que vieram com filled=true (figurinhas que estão coladas na página). */
+  /** Para mode='page': IDs com figurinha colada na foto. Vazio em outros modos. */
   filledIds: Set<string>
+  /** Para mode='backs': contagem de quantas vezes cada ID apareceu na foto. */
+  counts: Map<string, number>
   team: string | null
   page: number | null
   durationMs: number
   rawText: string
+  mode: CaptureMode
 }
 
 interface ParsedTrailer {
@@ -86,11 +91,12 @@ interface ProgressEvent {
 
 export async function recognizeWithGemini(
   rawBlob: Blob,
-  onProgress?: (e: ProgressEvent) => void,
+  options: { mode: CaptureMode; onProgress?: (e: ProgressEvent) => void },
 ): Promise<GeminiResult> {
   if (!BACKEND_URL || !CLIENT_TOKEN) {
     throw new Error('Backend Gemini não configurado (VITE_BACKEND_URL/VITE_CLIENT_TOKEN ausentes).')
   }
+  const { mode, onProgress } = options
 
   const start = performance.now()
   const optimized = await downsizeImage(rawBlob)
@@ -102,7 +108,7 @@ export async function recognizeWithGemini(
       'Content-Type': 'application/json',
       'X-Client-Token': CLIENT_TOKEN,
     },
-    body: JSON.stringify({ imageBase64, mimeType: 'image/jpeg' }),
+    body: JSON.stringify({ imageBase64, mimeType: 'image/jpeg', mode }),
   })
 
   if (!res.ok || !res.body) {
@@ -151,24 +157,31 @@ export async function recognizeWithGemini(
   }
 
   const filledIds = new Set<string>()
-  const ids: DetectedId[] = []
+  const counts = new Map<string, number>()
   for (const raw of trailer.parsed.ids ?? []) {
     if (typeof raw?.id !== 'string') continue
     const normalized = normalizeStickerId(raw.id)
     if (!normalized) continue
     if (!STICKERS_BY_ID.has(normalized)) continue
-    ids.push({ id: normalized, raw: raw.id, confidence: 100 })
+    counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
     if (raw.filled === true) filledIds.add(normalized)
   }
+  const ids: DetectedId[] = Array.from(counts.keys()).map((id) => ({
+    id,
+    raw: id,
+    confidence: 100,
+  }))
 
   onProgress?.({ progress: 1, bytesReceived })
 
   return {
     ids,
     filledIds,
+    counts,
     team: trailer.parsed.team ?? null,
     page: trailer.parsed.page ?? null,
     durationMs: trailer.durationMs ?? Math.round(performance.now() - start),
     rawText: streamedText || JSON.stringify(trailer.parsed, null, 2),
+    mode,
   }
 }

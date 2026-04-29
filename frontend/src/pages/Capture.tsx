@@ -84,8 +84,7 @@ export default function Capture() {
 
   function handleProceed() {
     if (!capture) return
-    // OCR vem na task #5; por ora, simulamos navegando pra revisão.
-    navigate('/review', { state: { capture } })
+    navigate('/review', { state: { capture, mode } })
   }
 
   if (status === 'denied') {
@@ -163,13 +162,13 @@ export default function Capture() {
         disabled={status !== 'live'}
         className="w-full rounded-xl bg-brand-500 px-5 py-4 font-medium text-white shadow-lg shadow-brand-500/20 transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:shadow-none"
       >
-        {mode === 'page' ? 'Capturar página' : 'Capturar figurinha'}
+        {mode === 'page' ? 'Capturar página do álbum' : 'Capturar repetidas (verso)'}
       </button>
 
       <p className="px-1 text-xs text-neutral-500">
         {mode === 'page'
-          ? 'Enquadre a página inteira do álbum, com boa iluminação. O app vai tentar detectar todos os IDs visíveis.'
-          : 'Enquadre uma única figurinha de perto, em foco. Use quando o reconhecimento da página inteira falhar.'}
+          ? 'Enquadre a página inteira do álbum, com boa iluminação. O app vai detectar os IDs e quais figurinhas estão coladas.'
+          : 'Espalhe as figurinhas repetidas com o VERSO virado para cima. Cada verso tem o ID no canto superior direito (ex: "AUT 8"). Pode haver duplicatas — cada uma soma +1 no estoque.'}
       </p>
     </div>
   )
@@ -185,10 +184,10 @@ function ModeToggle({
   return (
     <div className="grid grid-cols-2 rounded-xl border border-neutral-800 bg-neutral-900/50 p-1 text-sm">
       <ToggleButton selected={mode === 'page'} onClick={() => onChange('page')}>
-        Página inteira
+        Página do álbum
       </ToggleButton>
-      <ToggleButton selected={mode === 'single'} onClick={() => onChange('single')}>
-        Figurinha única
+      <ToggleButton selected={mode === 'backs'} onClick={() => onChange('backs')}>
+        Repetidas (verso)
       </ToggleButton>
     </div>
   )
