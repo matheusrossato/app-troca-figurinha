@@ -30,6 +30,7 @@ export const MUSEUM_COUNT = 11
 export const TEAM_COUNT = 48
 
 export type SectionKind = 'intro' | 'museum' | 'team'
+export type SlotKind = 'crest' | 'team_photo' | 'player' | 'intro' | 'museum'
 
 export interface Sticker {
   id: string
@@ -40,6 +41,11 @@ export interface Sticker {
   index: number
   isSpecial: boolean
   label: string
+  /** Tipo dentro da seleção / seção. */
+  slot: SlotKind
+  /** Página do álbum onde a figurinha mora (1-112). undefined para seções
+   *  cujas páginas ainda não foram mapeadas. */
+  page?: number
 }
 
 export interface Team {
@@ -158,6 +164,7 @@ export function buildAllStickers(): Sticker[] {
       index: i,
       isSpecial: true,
       label: `Introdução ${i}`,
+      slot: 'intro',
     })
   }
 
@@ -169,13 +176,21 @@ export function buildAllStickers(): Sticker[] {
       index: i,
       isSpecial: true,
       label: `FIFA Museum ${i}`,
+      slot: 'museum',
     })
   }
 
+  // Padrão confirmado em 6 seleções fotografadas (MEX, CAN, BIH, QAT, BRA, SCO):
+  //   slot 1  = escudo metalizado (especial)
+  //   slot 13 = foto da equipe + nome multilíngue
+  //   slots 2-12, 14-20 = 18 jogadores
+  // Slots 1-10 ficam na página par (startPage); 11-20 na página ímpar (startPage+1).
   for (const team of TEAMS) {
     for (let i = 1; i <= STICKERS_PER_TEAM; i++) {
       const isCrest = i === 1
-      const isTeamPhoto = i === 2
+      const isTeamPhoto = i === 13
+      const slot: SlotKind = isCrest ? 'crest' : isTeamPhoto ? 'team_photo' : 'player'
+      const playerNumber = i < 13 ? i - 1 : i - 2
       all.push({
         id: `${team.code}${i}`,
         section: 'team',
@@ -186,7 +201,9 @@ export function buildAllStickers(): Sticker[] {
           ? `${team.name} — escudo`
           : isTeamPhoto
             ? `${team.name} — foto da equipe`
-            : `${team.name} — jogador ${i - 2}`,
+            : `${team.name} — jogador ${playerNumber}`,
+        slot,
+        page: i <= 10 ? team.startPage : team.startPage + 1,
       })
     }
   }
