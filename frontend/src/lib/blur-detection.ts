@@ -81,13 +81,14 @@ export interface FocusState {
 }
 
 /** Mantém média móvel + flag de estabilidade pra auto-captura.
- *  Defaults calibrados pra dar tempo do autofoco do celular trabalhar
- *  antes de disparar (1.2s consecutivos com smoothed >= 180). */
+ *  Defaults calibrados pra dar tempo do autofoco trabalhar e do usuário
+ *  re-enquadrar antes de disparar (1.8s consecutivos com smoothed >= 180).
+ *  A camada de countdown na UI adiciona +1.5s antes da captura efetiva. */
 export function createFocusTracker({
   windowSize = 8,
   sharpThreshold = 180,
   okThreshold = 90,
-  stableFrames = 12,
+  stableFrames = 18,
 }: {
   windowSize?: number
   sharpThreshold?: number

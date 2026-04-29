@@ -17,6 +17,12 @@ import {
 type Status = 'starting' | 'live' | 'capturing' | 'preview' | 'denied' | 'error'
 
 const ANALYSIS_INTERVAL_MS = 100
+/** Tempo entre estabilizar e disparar a captura — dá ao usuário chance de cancelar. */
+const COUNTDOWN_MS = 1500
+/** Bloqueio garantido após "Refazer foto" — antes de qualquer auto-captura. */
+const RETAKE_COOLDOWN_MS = 3000
+/** Bloqueio quando usuário cancela o countdown manualmente (tap no visor). */
+const CANCEL_COOLDOWN_MS = 3000
 
 export default function Capture() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -36,6 +42,11 @@ export default function Capture() {
     quality: 'searching',
     stable: false,
   })
+  /** Timestamp em que o countdown foi iniciado (null = sem countdown ativo). */
+  const [countdownStartedAt, setCountdownStartedAt] = useState<number | null>(null)
+  /** Timestamp até o qual auto-captura está bloqueada (cooldown). */
+  const [cooldownUntil, setCooldownUntil] = useState<number>(0)
+  const countdownTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     return () => {
@@ -95,13 +106,57 @@ export default function Capture() {
     }
   }, [status])
 
+  // Inicia countdown quando o foco estabiliza e não há cooldown ativo.
+  // O countdown dá 1,5s pro usuário re-enquadrar ou cancelar antes de disparar.
   useEffect(() => {
     if (!autoCapture) return
     if (status !== 'live') return
     if (!focus.stable) return
-    void doCapture()
+    if (countdownStartedAt !== null) return
+    if (Date.now() < cooldownUntil) return
+
+    setCountdownStartedAt(Date.now())
+    countdownTimeoutRef.current = window.setTimeout(() => {
+      countdownTimeoutRef.current = null
+      setCountdownStartedAt(null)
+      void doCapture()
+    }, COUNTDOWN_MS)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focus.stable, autoCapture, status])
+  }, [focus.stable, autoCapture, status, cooldownUntil, countdownStartedAt])
+
+  // Cancela countdown se o foco caiu durante a contagem (usuário moveu o
+  // celular pra re-enquadrar) — sinal claro de que ele NÃO quer capturar agora.
+  useEffect(() => {
+    if (countdownStartedAt === null) return
+    if (focus.quality === 'sharp') return
+    cancelCountdown()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus.quality, countdownStartedAt])
+
+  // Cleanup do timeout em unmount.
+  useEffect(() => {
+    return () => {
+      if (countdownTimeoutRef.current) {
+        window.clearTimeout(countdownTimeoutRef.current)
+        countdownTimeoutRef.current = null
+      }
+    }
+  }, [])
+
+  function cancelCountdown(addCooldown = false) {
+    if (countdownTimeoutRef.current) {
+      window.clearTimeout(countdownTimeoutRef.current)
+      countdownTimeoutRef.current = null
+    }
+    setCountdownStartedAt(null)
+    if (addCooldown) setCooldownUntil(Date.now() + CANCEL_COOLDOWN_MS)
+  }
+
+  function handleVisorTap() {
+    // Tap no visor durante o countdown cancela e adiciona cooldown — usuário
+    // está dizendo "não, espera, vou ajustar".
+    if (countdownStartedAt !== null) cancelCountdown(true)
+  }
 
   async function doCapture() {
     if (!videoRef.current || status === 'capturing') return
@@ -131,6 +186,10 @@ export default function Capture() {
   function handleRetake() {
     setPreview(null)
     setStatus('starting')
+    // Cooldown garantido após retake — evita auto-captura disparar antes do
+    // usuário ter chance de re-enquadrar a página.
+    setCooldownUntil(Date.now() + RETAKE_COOLDOWN_MS)
+    cancelCountdown()
   }
 
   function handleSubmit() {
@@ -199,16 +258,29 @@ export default function Capture() {
     )
   }
 
+  const cooldownRemaining = Math.max(0, cooldownUntil - Date.now())
+  const inCooldown = cooldownRemaining > 0
+
   return (
     <div className="-mx-4 -my-4 flex h-[calc(100vh-3.25rem-3.25rem)] flex-col bg-black">
-      <div className="relative flex-1 overflow-hidden">
+      <div
+        className="relative flex-1 overflow-hidden"
+        onClick={handleVisorTap}
+      >
         <video
           ref={videoRef}
           playsInline
           muted
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <FocusOverlay quality={focus.quality} status={status} autoCapture={autoCapture} />
+        <FocusOverlay
+          quality={focus.quality}
+          status={status}
+          autoCapture={autoCapture}
+          countdownActive={countdownStartedAt !== null}
+          inCooldown={inCooldown}
+        />
+        {countdownStartedAt !== null && <CountdownBar />}
       </div>
 
       <div className="space-y-2.5 border-t border-navy-outline/30 bg-navy-bg/95 px-4 pt-3 pb-4 backdrop-blur-xl">
@@ -262,13 +334,18 @@ function FocusOverlay({
   quality,
   status,
   autoCapture,
+  countdownActive,
+  inCooldown,
 }: {
   quality: FocusQuality
   status: Status
   autoCapture: boolean
+  countdownActive: boolean
+  inCooldown: boolean
 }) {
-  const bracketColor =
-    quality === 'sharp'
+  const bracketColor = inCooldown
+    ? '#aac7ff'
+    : quality === 'sharp'
       ? '#00f260'
       : quality === 'ok'
         ? '#f9d423'
@@ -276,7 +353,7 @@ function FocusOverlay({
           ? '#ff6b6b'
           : '#aac7ff'
 
-  const showLaser = status === 'live' && quality === 'sharp'
+  const showLaser = status === 'live' && quality === 'sharp' && !inCooldown
 
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -312,7 +389,12 @@ function FocusOverlay({
           📸 capturando
         </span>
       )}
-      {status === 'live' && autoCapture && quality === 'sharp' && (
+      {status === 'live' && inCooldown && (
+        <span className="absolute bottom-4 rounded-full bg-fifa-blue/90 px-3 py-1 text-xs font-semibold text-white">
+          ajuste o enquadramento…
+        </span>
+      )}
+      {status === 'live' && autoCapture && !inCooldown && !countdownActive && quality === 'sharp' && (
         <span className="absolute bottom-4 rounded-full bg-pitch-green/90 px-3 py-1 text-xs font-semibold text-black shadow-pitch-glow">
           nítido
         </span>
@@ -325,7 +407,27 @@ function FocusOverlay({
           90%  { opacity: 1; }
           100% { top: 92%; opacity: 0; }
         }
+        @keyframes countdown-bar {
+          from { width: 0%; }
+          to   { width: 100%; }
+        }
       `}</style>
+    </div>
+  )
+}
+
+function CountdownBar() {
+  return (
+    <div className="pointer-events-none absolute inset-x-8 bottom-16 z-10">
+      <div className="mb-1.5 text-center text-xs font-semibold text-white drop-shadow">
+        Capturando em 1,5s — toque pra cancelar
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-white/25">
+        <div
+          className="h-full bg-pitch-green shadow-pitch-glow"
+          style={{ animation: 'countdown-bar 1500ms linear forwards' }}
+        />
+      </div>
     </div>
   )
 }
