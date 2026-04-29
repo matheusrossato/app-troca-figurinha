@@ -3,7 +3,15 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { CapturedImage, CaptureMode } from '../lib/camera'
 import { recognizeStickerIds, type DetectedId } from '../lib/ocr'
 import { isGeminiConfigured, recognizeWithGemini } from '../lib/gemini'
-import { STICKERS_BY_ID, TEAMS_BY_CODE } from '../data/album'
+import {
+  INTRO_CODE,
+  INTRO_COUNT,
+  MUSEUM_CODE,
+  MUSEUM_COUNT,
+  STICKERS_BY_ID,
+  STICKERS_PER_TEAM,
+  TEAMS_BY_CODE,
+} from '../data/album'
 import { bulkAdd, bulkIncrement } from '../db'
 
 interface LocationState {
@@ -231,6 +239,32 @@ function ProgressBox({ progress, mode }: { progress: number; mode: CaptureMode }
   )
 }
 
+function expandExpectedIds(
+  detected: DetectedId[],
+  team: string | null,
+): string[] {
+  const set = new Set<string>(detected.map((d) => d.id))
+
+  if (team && TEAMS_BY_CODE.has(team)) {
+    for (let i = 1; i <= STICKERS_PER_TEAM; i++) set.add(`${team}${i}`)
+  }
+  if (detected.some((d) => d.id.startsWith(INTRO_CODE))) {
+    for (let i = 1; i <= INTRO_COUNT; i++) set.add(`${INTRO_CODE}${i}`)
+  }
+  if (detected.some((d) => d.id.startsWith(MUSEUM_CODE))) {
+    for (let i = 1; i <= MUSEUM_COUNT; i++) set.add(`${MUSEUM_CODE}${i}`)
+  }
+
+  return Array.from(set).sort((a, b) => {
+    // Ordena por code primeiro, depois por número numericamente.
+    const ma = a.match(/^([A-Z]+)(\d+)$/)
+    const mb = b.match(/^([A-Z]+)(\d+)$/)
+    if (!ma || !mb) return a.localeCompare(b)
+    if (ma[1] !== mb[1]) return ma[1].localeCompare(mb[1])
+    return Number(ma[2]) - Number(mb[2])
+  })
+}
+
 function PageResultPanel({
   result,
   selected,
@@ -249,6 +283,9 @@ function PageResultPanel({
   }
 
   const teamName = result.team ? TEAMS_BY_CODE.get(result.team)?.name : null
+  const allIds = expandExpectedIds(result.ids, result.team)
+  const detectedSet = new Set(result.ids.map((d) => d.id))
+  const expectedNotDetected = allIds.filter((id) => !detectedSet.has(id))
 
   return (
     <div className="space-y-3">
@@ -261,6 +298,11 @@ function PageResultPanel({
             {result.filledIds.size} colada{result.filledIds.size === 1 ? '' : 's'}
           </span>
         )}
+        {expectedNotDetected.length > 0 && (
+          <span className="text-neutral-400">
+            +{expectedNotDetected.length} esperada{expectedNotDetected.length === 1 ? '' : 's'}
+          </span>
+        )}
         {teamName && <span className="text-neutral-300">{teamName}</span>}
         {result.page && <span>p. {result.page}</span>}
         <span>·</span>
@@ -270,37 +312,41 @@ function PageResultPanel({
 
       {result.source === 'gemini' && (
         <p className="rounded-lg border border-neutral-800 bg-neutral-900/30 px-3 py-2 text-xs text-neutral-400">
-          Pré-selecionei as figurinhas que aparecem coladas na foto. Toque para
-          ajustar antes de salvar.
+          Pré-selecionei as <strong className="text-emerald-300">coladas</strong> detectadas. Os IDs
+          marcados como <strong className="text-neutral-300">"esperada"</strong> não foram detectados
+          pelo Gemini — toque para marcar manualmente se você os tem (ex: FWC coladas que mostram só
+          a imagem do troféu).
         </p>
       )}
 
       <ul className="grid grid-cols-2 gap-2">
-        {result.ids.map((d) => {
-          const sticker = STICKERS_BY_ID.get(d.id)
-          const isOn = selected.has(d.id)
-          const isFilled = result.filledIds.has(d.id)
+        {allIds.map((id) => {
+          const sticker = STICKERS_BY_ID.get(id)
+          const isOn = selected.has(id)
+          const wasDetected = detectedSet.has(id)
+          const isFilled = result.filledIds.has(id)
+          const tag = !wasDetected
+            ? { label: 'esperada', cls: 'text-neutral-500' }
+            : isFilled
+              ? { label: 'colada', cls: 'text-emerald-400' }
+              : { label: 'vazio', cls: 'text-neutral-600' }
           return (
-            <li key={d.id}>
+            <li key={id}>
               <button
-                onClick={() => onToggle(d.id)}
+                onClick={() => onToggle(id)}
                 className={`w-full rounded-xl border px-3 py-2 text-left transition ${
                   isOn
-                    ? 'border-brand-500 bg-brand-500/10 text-white'
-                    : 'border-neutral-800 bg-neutral-900/50 text-neutral-400'
+                    ? 'border-gold-500 bg-gold-500/10 text-white'
+                    : wasDetected
+                      ? 'border-neutral-800 bg-neutral-900/50 text-neutral-400'
+                      : 'border-dashed border-neutral-800 bg-neutral-900/20 text-neutral-500'
                 }`}
               >
                 <div className="flex items-center gap-2 font-mono text-sm font-semibold">
-                  <span>{d.id}</span>
-                  {result.source === 'gemini' && (
-                    <span
-                      className={`ml-auto text-[10px] uppercase tracking-wide ${
-                        isFilled ? 'text-emerald-400' : 'text-neutral-600'
-                      }`}
-                    >
-                      {isFilled ? 'colada' : 'vazio'}
-                    </span>
-                  )}
+                  <span>{id}</span>
+                  <span className={`ml-auto text-[10px] uppercase tracking-wide ${tag.cls}`}>
+                    {tag.label}
+                  </span>
                 </div>
                 <div className="truncate text-xs text-neutral-500">
                   {sticker?.label ?? '—'}
@@ -314,9 +360,13 @@ function PageResultPanel({
       <button
         onClick={onConfirm}
         disabled={selected.size === 0}
-        className="w-full rounded-xl bg-brand-500 px-5 py-4 font-medium text-white transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-neutral-700"
+        className="bg-fwc-rainbow shadow-gold-glow w-full rounded-2xl p-[2px] transition active:scale-[0.99] disabled:opacity-40"
       >
-        Salvar {selected.size} figurinha{selected.size === 1 ? '' : 's'}
+        <div className="rounded-[14px] bg-[#0a0a0f] px-5 py-3 text-center">
+          <span className="text-sm font-bold text-white">
+            Salvar {selected.size} figurinha{selected.size === 1 ? '' : 's'}
+          </span>
+        </div>
       </button>
 
       <DebugRaw result={result} />

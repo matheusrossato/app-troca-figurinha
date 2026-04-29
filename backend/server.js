@@ -70,11 +70,15 @@ REGRA DE NUMERAÇÃO (para evitar erros comuns):
 
 CÓDIGOS válidos:
 - 3 letras (código FIFA da seleção) + número 1 a 20. Exemplos: BRA1, BRA13, MEX7, QAT20, SCO1.
-- FWC + número 1 a 9 (introdução, mascote, slogan, troféus, bola).
+- FWC + número 1 a 9 (introdução: troféus, bola, mascotes, slogan, etc.).
 - FM + número 1 a 11 (FIFA Museum / campeões anteriores).
 
-Quando o espaço estiver vazio, o álbum imprime o código e (em slots de jogador) o nome do jogador.
-Quando estiver colado, vê-se a foto da figurinha (jogador, escudo holográfico ou foto da equipe).
+VAZIO vs COLADO (regra importante):
+- Slot VAZIO: mostra o código impresso no espaço (ex: "MEX 7", "FWC 3") + texto descritivo (nome do jogador, "Mascotes Oficiais", "Slogan Oficial", etc.).
+- Slot COLADO com figurinha de jogador: mostra a foto do jogador, escudo da seleção. Geralmente é possível inferir o ID pelo nome impresso embaixo OU pela posição relativa.
+- Slot COLADO com figurinha FWC (introdução): mostra APENAS a imagem temática (troféu metalizado, bola, mascote oficial, slogan, escudo de host) — SEM o código "FWC X" visível. Você precisa INFERIR o FWC pela imagem e contexto (texto ao redor que sobrou da página).
+
+Identifique TODOS os slots da página (vazios e colados). Para FWC colados sem código visível, retorne o ID que a imagem sugere (ex: figurinha do troféu = FWC1 ou FWC2; figurinha de mascote = FWC dos mascotes). Se o slot está claramente colado mas você não consegue inferir o número exato, AINDA ASSIM inclua a entrada com o ID mais provável e filled=true.
 
 Retorne APENAS um objeto JSON SEM markdown e SEM comentário, com este schema exato:
 {
