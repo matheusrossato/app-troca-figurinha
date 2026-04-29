@@ -72,19 +72,19 @@ export default function Settings() {
   return (
     <div className="space-y-3">
       <Section title="Backup">
-        <p className="mb-3 text-sm text-neutral-400">
+        <p className="mb-3 text-sm text-on-surface-variant">
           {stats.tidas} figurinhas tidas · {stats.totalCopias} cópias totais.
         </p>
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleExport}
-            className="rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-3 font-medium text-neutral-200 transition active:scale-[0.99]"
+            className="glass-card rounded-xl px-4 py-3 font-medium text-on-surface transition active:scale-[0.99]"
           >
             Exportar JSON
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-3 font-medium text-neutral-200 transition active:scale-[0.99]"
+            className="glass-card rounded-xl px-4 py-3 font-medium text-on-surface transition active:scale-[0.99]"
           >
             Importar JSON
           </button>
@@ -105,7 +105,7 @@ export default function Settings() {
       <Section title="Zona de risco">
         <button
           onClick={handleClear}
-          className="w-full rounded-xl border border-red-900 bg-red-950/30 px-4 py-3 text-sm font-medium text-red-300 transition active:scale-[0.99]"
+          className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-300 backdrop-blur transition active:scale-[0.99]"
         >
           Apagar tudo
         </button>
@@ -113,10 +113,10 @@ export default function Settings() {
 
       {message && (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
+          className={`rounded-xl border px-4 py-3 text-sm backdrop-blur ${
             message.type === 'ok'
-              ? 'border-emerald-900 bg-emerald-950/20 text-emerald-200'
-              : 'border-red-900 bg-red-950/30 text-red-300'
+              ? 'border-pitch-green/30 bg-pitch-green/10 text-pitch-green-soft'
+              : 'border-red-500/30 bg-red-500/10 text-red-300'
           }`}
         >
           {message.text}
@@ -124,7 +124,7 @@ export default function Settings() {
       )}
 
       <Section title="Sobre">
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-on-surface-variant">
           PWA local-first para gerenciar a coleção do álbum Panini FIFA World Cup 2026
           (980 figurinhas, 112 páginas). Reconhecimento de figurinhas via Tesseract.js
           local. Dados no IndexedDB do navegador.
@@ -136,8 +136,8 @@ export default function Settings() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-400">
+    <section className="glass-card rounded-xl p-4">
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
         {title}
       </h2>
       {children}

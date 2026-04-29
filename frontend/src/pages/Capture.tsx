@@ -37,7 +37,6 @@ export default function Capture() {
     stable: false,
   })
 
-  // Cleanup geral no unmount.
   useEffect(() => {
     return () => {
       stopStream(streamRef.current)
@@ -45,8 +44,6 @@ export default function Capture() {
     }
   }, [])
 
-  // Inicia câmera sempre que entrar em 'starting'. Dispara no mount inicial
-  // (status default = 'starting') e quando handleRetake seta de volta.
   useEffect(() => {
     if (status !== 'starting') return
     if (!videoRef.current) return
@@ -77,7 +74,6 @@ export default function Capture() {
     }
   }, [status])
 
-  // Loop de medição de nitidez quando está "live" e não capturando.
   useEffect(() => {
     if (status !== 'live') return
     trackerRef.current.reset()
@@ -94,7 +90,6 @@ export default function Capture() {
     }
   }, [status])
 
-  // Auto-captura quando estável + autoCapture ligado.
   useEffect(() => {
     if (!autoCapture) return
     if (status !== 'live') return
@@ -119,7 +114,6 @@ export default function Capture() {
       } catch {
         /* opcional */
       }
-      // Não vai direto pro Gemini — mostra preview antes pra usuário aprovar.
       setPreview(shot)
       setStatus('preview')
     } catch (err) {
@@ -130,8 +124,6 @@ export default function Capture() {
   }
 
   function handleRetake() {
-    // Volta o status pra 'starting'. O useEffect detecta a mudança,
-    // o componente re-renderiza com o <video> no DOM, e a câmera reinicia.
     setPreview(null)
     setStatus('starting')
   }
@@ -144,8 +136,8 @@ export default function Capture() {
   if (status === 'denied') {
     return (
       <Box>
-        <h2 className="text-base font-semibold text-amber-300">Permissão negada</h2>
-        <p className="mt-2 text-sm text-neutral-400">
+        <h2 className="text-base font-semibold text-trophy-gold">Permissão negada</h2>
+        <p className="mt-2 text-sm text-on-surface-variant">
           O navegador bloqueou o acesso à câmera. Abra as configurações do site no Chrome,
           permita "Câmera" e recarregue.
         </p>
@@ -157,7 +149,7 @@ export default function Capture() {
     return (
       <Box>
         <h2 className="text-base font-semibold text-red-300">Erro</h2>
-        <p className="mt-2 text-sm text-neutral-400">{errorMsg}</p>
+        <p className="mt-2 text-sm text-on-surface-variant">{errorMsg}</p>
       </Box>
     )
   }
@@ -173,26 +165,26 @@ export default function Capture() {
           />
         </div>
 
-        <div className="space-y-2.5 border-t border-neutral-900 bg-[#0a0a0f] px-4 pt-3 pb-4">
-          <div className="text-center text-xs text-neutral-400">
+        <div className="space-y-2.5 border-t border-navy-outline/30 bg-navy-bg/95 px-4 pt-3 pb-4 backdrop-blur-xl">
+          <div className="text-center text-xs text-on-surface-variant">
             {mode === 'page' ? 'Página do álbum' : 'Repetidas (verso)'}
-            <span className="mx-2 text-neutral-700">·</span>
+            <span className="mx-2 text-on-surface-variant/40">·</span>
             {preview.width}×{preview.height}
-            <span className="mx-2 text-neutral-700">·</span>
+            <span className="mx-2 text-on-surface-variant/40">·</span>
             {(preview.blob.size / 1024).toFixed(0)} KB
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleRetake}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3 font-semibold text-neutral-200 transition active:scale-[0.99]"
+              className="glass-card rounded-2xl px-4 py-3 font-semibold text-on-surface transition active:scale-[0.99]"
             >
               Refazer foto
             </button>
             <button
               onClick={handleSubmit}
-              className="bg-fwc-rainbow shadow-gold-glow rounded-2xl p-[2px] transition active:scale-[0.99]"
+              className="bg-fifa-pitch-gradient shadow-fifa-glow rounded-2xl p-[2px] transition active:scale-[0.99]"
             >
-              <div className="rounded-[14px] bg-[#0a0a0f] px-4 py-3 text-center">
+              <div className="rounded-[14px] bg-navy-bg/85 px-4 py-3 text-center backdrop-blur">
                 <span className="text-sm font-bold text-white">Enviar →</span>
               </div>
             </button>
@@ -214,7 +206,7 @@ export default function Capture() {
         <FocusOverlay quality={focus.quality} status={status} autoCapture={autoCapture} />
       </div>
 
-      <div className="space-y-2.5 border-t border-neutral-900 bg-[#0a0a0f] px-4 pt-3 pb-4">
+      <div className="space-y-2.5 border-t border-navy-outline/30 bg-navy-bg/95 px-4 pt-3 pb-4 backdrop-blur-xl">
         <ModeToggle mode={mode} onChange={setMode} />
 
         <div className="flex items-center justify-between gap-3">
@@ -222,13 +214,13 @@ export default function Capture() {
             onClick={() => setAutoCapture((v) => !v)}
             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
               autoCapture
-                ? 'border-gold-700 bg-gold-500/10 text-gold-300'
-                : 'border-neutral-800 bg-neutral-900 text-neutral-400'
+                ? 'border-pitch-green/40 bg-pitch-green/10 text-pitch-green-soft'
+                : 'border-navy-outline/40 bg-navy-surface/60 text-on-surface-variant'
             }`}
           >
             <span
               className={`h-2 w-2 rounded-full ${
-                autoCapture ? 'bg-gold-400' : 'bg-neutral-600'
+                autoCapture ? 'bg-pitch-green shadow-pitch-glow' : 'bg-on-surface-variant/40'
               }`}
             />
             Auto-captura
@@ -239,9 +231,9 @@ export default function Capture() {
         <button
           onClick={doCapture}
           disabled={status !== 'live'}
-          className="bg-fwc-rainbow shadow-gold-glow w-full rounded-2xl p-[2px] transition active:scale-[0.99] disabled:opacity-50"
+          className="bg-fifa-pitch-gradient shadow-fifa-glow w-full rounded-2xl p-[2px] transition active:scale-[0.99] disabled:opacity-50"
         >
-          <div className="rounded-[14px] bg-[#0a0a0f] px-4 py-3 text-center">
+          <div className="rounded-[14px] bg-navy-bg/85 px-4 py-3 text-center backdrop-blur">
             <span className="text-sm font-bold text-white">
               {status === 'capturing'
                 ? 'Capturando…'
@@ -256,6 +248,11 @@ export default function Capture() {
   )
 }
 
+/**
+ * Overlay de scan inspirado no design system: 4 brackets nos cantos do
+ * "focus frame" + linha laser horizontal animada quando está nítido.
+ * A cor dos brackets reflete o estado do foco.
+ */
 function FocusOverlay({
   quality,
   status,
@@ -265,37 +262,88 @@ function FocusOverlay({
   status: Status
   autoCapture: boolean
 }) {
-  const ringColor =
+  const bracketColor =
     quality === 'sharp'
-      ? 'border-emerald-400'
+      ? '#00f260'
       : quality === 'ok'
-        ? 'border-amber-400'
+        ? '#f9d423'
         : quality === 'low'
-          ? 'border-red-500/70'
-          : 'border-neutral-500/40'
+          ? '#ff6b6b'
+          : '#aac7ff'
+
+  const showLaser = status === 'live' && quality === 'sharp'
 
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       <div
-        className={`h-[88%] w-[92%] rounded-2xl border-2 ${ringColor} transition-colors duration-200`}
-        style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.20)' }}
-      />
+        className="relative h-[88%] w-[92%] overflow-hidden rounded-2xl"
+        style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.30)' }}
+      >
+        {/* 4 brackets nos cantos */}
+        <Bracket pos="tl" color={bracketColor} />
+        <Bracket pos="tr" color={bracketColor} />
+        <Bracket pos="bl" color={bracketColor} />
+        <Bracket pos="br" color={bracketColor} />
+
+        {/* laser horizontal animado quando nítido */}
+        {showLaser && (
+          <div
+            className="absolute inset-x-0 h-0.5 animate-[scan_2s_linear_infinite]"
+            style={{
+              background: `linear-gradient(90deg, transparent 0%, ${bracketColor} 50%, transparent 100%)`,
+              boxShadow: `0 0 8px ${bracketColor}`,
+            }}
+          />
+        )}
+      </div>
+
       {status === 'starting' && (
-        <span className="absolute bottom-4 text-xs text-neutral-300">
+        <span className="absolute bottom-4 text-xs text-on-surface-variant">
           Iniciando câmera…
         </span>
       )}
       {status === 'capturing' && (
-        <span className="absolute bottom-4 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-black">
+        <span className="absolute bottom-4 rounded-full bg-pitch-green/90 px-3 py-1 text-xs font-semibold text-black shadow-pitch-glow">
           📸 capturando
         </span>
       )}
       {status === 'live' && autoCapture && quality === 'sharp' && (
-        <span className="absolute bottom-4 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-black">
+        <span className="absolute bottom-4 rounded-full bg-pitch-green/90 px-3 py-1 text-xs font-semibold text-black shadow-pitch-glow">
           nítido
         </span>
       )}
+
+      <style>{`
+        @keyframes scan {
+          0%   { top: 8%;  opacity: 0; }
+          10%  { opacity: 1; }
+          90%  { opacity: 1; }
+          100% { top: 92%; opacity: 0; }
+        }
+      `}</style>
     </div>
+  )
+}
+
+function Bracket({
+  pos,
+  color,
+}: {
+  pos: 'tl' | 'tr' | 'bl' | 'br'
+  color: string
+}) {
+  const base = 'absolute h-9 w-9 transition-colors duration-200'
+  const positions: Record<typeof pos, string> = {
+    tl: 'top-2 left-2 border-t-[3px] border-l-[3px] rounded-tl-xl',
+    tr: 'top-2 right-2 border-t-[3px] border-r-[3px] rounded-tr-xl',
+    bl: 'bottom-2 left-2 border-b-[3px] border-l-[3px] rounded-bl-xl',
+    br: 'bottom-2 right-2 border-b-[3px] border-r-[3px] rounded-br-xl',
+  }
+  return (
+    <div
+      className={`${base} ${positions[pos]}`}
+      style={{ borderColor: color, boxShadow: `0 0 14px -2px ${color}` }}
+    />
   )
 }
 
@@ -307,15 +355,15 @@ function FocusBadge({
   smoothed: number
 }) {
   const map: Record<FocusQuality, { label: string; color: string }> = {
-    searching: { label: 'buscando…', color: 'text-neutral-500' },
+    searching: { label: 'buscando…', color: 'text-on-surface-variant/60' },
     low: { label: 'desfocado', color: 'text-red-400' },
-    ok: { label: 'razoável', color: 'text-amber-300' },
-    sharp: { label: 'nítido', color: 'text-emerald-400' },
+    ok: { label: 'razoável', color: 'text-trophy-gold' },
+    sharp: { label: 'nítido', color: 'text-pitch-green' },
   }
   const v = map[quality]
   return (
     <span className={`font-mono text-xs ${v.color}`}>
-      {v.label} <span className="text-neutral-600">{Math.round(smoothed)}</span>
+      {v.label} <span className="text-on-surface-variant/40">{Math.round(smoothed)}</span>
     </span>
   )
 }
@@ -328,7 +376,7 @@ function ModeToggle({
   onChange: (m: CaptureMode) => void
 }) {
   return (
-    <div className="grid grid-cols-2 rounded-xl border border-neutral-800 bg-neutral-900/50 p-1 text-sm">
+    <div className="glass-card grid grid-cols-2 rounded-xl p-1 text-sm">
       <ToggleButton selected={mode === 'page'} onClick={() => onChange('page')}>
         Página do álbum
       </ToggleButton>
@@ -352,7 +400,9 @@ function ToggleButton({
     <button
       onClick={onClick}
       className={`rounded-lg py-2 font-semibold transition ${
-        selected ? 'bg-neutral-800 text-gold-300' : 'text-neutral-400 hover:text-neutral-200'
+        selected
+          ? 'bg-fifa-blue/20 text-fifa-blue-soft'
+          : 'text-on-surface-variant hover:text-on-surface'
       }`}
     >
       {children}
@@ -361,9 +411,5 @@ function ToggleButton({
 }
 
 function Box({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-4 py-6">
-      {children}
-    </div>
-  )
+  return <div className="glass-card rounded-xl px-4 py-6">{children}</div>
 }

@@ -100,12 +100,12 @@ export default function Review() {
   if (!capture) {
     return (
       <div className="space-y-3">
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-4 py-12 text-center text-neutral-400">
+        <div className="rounded-xl border border-navy-outline/30 bg-navy-surface/40 px-4 py-12 text-center text-neutral-400">
           Nenhuma captura para revisar.
         </div>
         <Link
           to="/capture"
-          className="block rounded-xl bg-brand-500 px-4 py-3 text-center font-medium text-white"
+          className="block rounded-xl bg-fifa-blue px-4 py-3 text-center font-medium text-white shadow-fifa-glow"
         >
           Ir para câmera
         </Link>
@@ -148,14 +148,14 @@ export default function Review() {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-xl border border-neutral-800">
+      <div className="overflow-hidden rounded-xl border border-navy-outline/30">
         <img src={capture.dataUrl} alt="captura" className="block w-full" />
       </div>
 
       {status === 'running' && <ProgressBox progress={progress} mode={mode} />}
 
       {status === 'error' && (
-        <div className="rounded-xl border border-red-900 bg-red-950/30 px-4 py-3 text-sm text-red-300">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 backdrop-blur">
           Falha no reconhecimento: {errorMsg}
         </div>
       )}
@@ -234,17 +234,17 @@ async function runRecognition(
 function ProgressBox({ progress, mode }: { progress: number; mode: CaptureMode }) {
   const pct = Math.round(progress * 100)
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 px-4 py-3">
-      <div className="text-sm text-neutral-300">
+    <div className="glass-card rounded-xl px-4 py-3">
+      <div className="text-sm text-on-surface">
         {mode === 'backs' ? 'Lendo versos…' : 'Reconhecendo página…'}
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-800">
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-navy-surface-lowest">
         <div
-          className="h-full bg-brand-500 transition-all"
+          className="h-full bg-fifa-pitch-gradient transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="mt-1 text-right text-xs tabular-nums text-neutral-500">{pct}%</div>
+      <div className="mt-1 text-right text-xs tabular-nums text-on-surface-variant/60">{pct}%</div>
     </div>
   )
 }
@@ -302,33 +302,33 @@ function PageResultPanel({
   return (
     <div className="space-y-3">
       {team && (
-        <div className="flex items-center gap-3 rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 px-4 py-3">
+        <div className="glass-card flex items-center gap-3 rounded-2xl px-4 py-3">
           <span className="text-3xl leading-none">{team.flag}</span>
           <div className="flex-1">
-            <div className="text-base font-bold text-white">{team.name}</div>
-            <div className="text-[11px] uppercase tracking-wide text-neutral-500">
+            <div className="text-base font-bold text-on-surface">{team.name}</div>
+            <div className="text-[11px] uppercase tracking-wide text-on-surface-variant/70">
               Grupo {team.group} · {team.code}
             </div>
           </div>
           {result.page && (
-            <span className="rounded-md bg-neutral-800/60 px-2 py-0.5 text-xs font-mono text-neutral-300">
+            <span className="rounded-md bg-navy-surface-3/60 px-2 py-0.5 text-xs font-mono text-on-surface">
               p. {result.page}
             </span>
           )}
         </div>
       )}
 
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-neutral-500">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-on-surface-variant/70">
         <span>
           {result.ids.length} detectada{result.ids.length === 1 ? '' : 's'}
         </span>
         {result.source === 'gemini' && result.filledIds.size > 0 && (
-          <span className="text-emerald-400">
+          <span className="text-pitch-green">
             {result.filledIds.size} colada{result.filledIds.size === 1 ? '' : 's'}
           </span>
         )}
         {expectedNotDetected.length > 0 && (
-          <span className="text-neutral-400">
+          <span className="text-on-surface-variant">
             +{expectedNotDetected.length} esperada{expectedNotDetected.length === 1 ? '' : 's'}
           </span>
         )}
@@ -338,9 +338,9 @@ function PageResultPanel({
       </div>
 
       {result.source === 'gemini' && (
-        <p className="rounded-lg border border-neutral-800 bg-neutral-900/30 px-3 py-2 text-xs text-neutral-400">
-          Pré-selecionei só as figurinhas <strong className="text-amber-300">novas</strong> (coladas
-          que ainda não tinha registrado). Cards <strong className="text-emerald-400">"no álbum"</strong>
+        <p className="glass-card rounded-lg px-3 py-2 text-xs text-on-surface-variant">
+          Pré-selecionei só as figurinhas <strong className="text-trophy-gold">novas</strong> (coladas
+          que ainda não tinha registrado). Cards <strong className="text-pitch-green">"no álbum"</strong>
           já estão na sua coleção e não duplicam — toque caso queira tratar como repetida.
         </p>
       )}
@@ -356,25 +356,25 @@ function PageResultPanel({
           let tag: { label: string; cls: string }
           let containerCls: string
           if (owned) {
-            tag = { label: `no álbum × ${owned.count}`, cls: 'text-emerald-400' }
+            tag = { label: `no álbum × ${owned.count}`, cls: 'text-pitch-green' }
             containerCls = isOn
-              ? 'border-gold-500 bg-gold-500/10 text-white'
-              : 'border-emerald-900/40 bg-emerald-950/20 text-emerald-100'
+              ? 'border-fifa-blue bg-fifa-blue/15 text-white'
+              : 'border-pitch-green/30 bg-pitch-green/5 text-pitch-green-soft'
           } else if (!wasDetected) {
-            tag = { label: 'esperada', cls: 'text-neutral-500' }
+            tag = { label: 'esperada', cls: 'text-on-surface-variant/60' }
             containerCls = isOn
-              ? 'border-gold-500 bg-gold-500/10 text-white'
-              : 'border-dashed border-neutral-800 bg-neutral-900/20 text-neutral-500'
+              ? 'border-fifa-blue bg-fifa-blue/15 text-white'
+              : 'border-dashed border-navy-outline/40 bg-navy-surface/30 text-on-surface-variant/60'
           } else if (isFilled) {
-            tag = { label: 'nova', cls: 'text-amber-300' }
+            tag = { label: 'nova', cls: 'text-trophy-gold' }
             containerCls = isOn
-              ? 'border-gold-500 bg-gold-500/10 text-white'
-              : 'border-amber-900/40 bg-amber-950/20 text-amber-100'
+              ? 'border-fifa-blue bg-fifa-blue/15 text-white'
+              : 'border-trophy-gold/40 bg-trophy-gold/5 text-trophy-gold'
           } else {
-            tag = { label: 'vazio', cls: 'text-neutral-600' }
+            tag = { label: 'vazio', cls: 'text-on-surface-variant/50' }
             containerCls = isOn
-              ? 'border-gold-500 bg-gold-500/10 text-white'
-              : 'border-neutral-800 bg-neutral-900/50 text-neutral-400'
+              ? 'border-fifa-blue bg-fifa-blue/15 text-white'
+              : 'border-navy-outline/30 bg-navy-surface/50 text-on-surface-variant'
           }
 
           return (
@@ -401,9 +401,9 @@ function PageResultPanel({
       <button
         onClick={onConfirm}
         disabled={selected.size === 0}
-        className="bg-fwc-rainbow shadow-gold-glow w-full rounded-2xl p-[2px] transition active:scale-[0.99] disabled:opacity-40"
+        className="bg-fifa-pitch-gradient shadow-fifa-glow w-full rounded-2xl p-[2px] transition active:scale-[0.99] disabled:opacity-40"
       >
-        <div className="rounded-[14px] bg-[#0a0a0f] px-5 py-3 text-center">
+        <div className="rounded-[14px] bg-navy-bg/85 px-5 py-3 text-center backdrop-blur">
           <span className="text-sm font-bold text-white">
             {selected.size === 0
               ? 'Nada a adicionar'
@@ -439,9 +439,9 @@ function BacksResultPanel({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-neutral-500">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-on-surface-variant/70">
         <span>{counts.size} ID{counts.size === 1 ? '' : 's'} distintos</span>
-        <span className="text-sky-400">
+        <span className="text-fifa-blue-soft">
           {totalCopias} cópia{totalCopias === 1 ? '' : 's'} no total
         </span>
         <span>·</span>
@@ -449,7 +449,7 @@ function BacksResultPanel({
         <span>{Math.round(result.durationMs)}ms</span>
       </div>
 
-      <p className="rounded-lg border border-neutral-800 bg-neutral-900/30 px-3 py-2 text-xs text-neutral-400">
+      <p className="glass-card rounded-lg px-3 py-2 text-xs text-on-surface-variant">
         Quantidade de cada ID detectado nos versos. Ajuste com − / + se Gemini
         contou errado, depois salve. Cada cópia soma ao seu estoque atual.
       </p>
@@ -461,27 +461,27 @@ function BacksResultPanel({
           return (
             <li
               key={id}
-              className="flex items-center gap-3 rounded-xl border border-neutral-800 bg-neutral-900/50 px-3 py-2"
+              className="glass-card flex items-center gap-3 rounded-xl px-3 py-2"
             >
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-sm font-semibold text-white">{id}</div>
-                <div className="truncate text-xs text-neutral-500">
+                <div className="font-mono text-sm font-semibold text-on-surface">{id}</div>
+                <div className="truncate text-xs text-on-surface-variant/70">
                   {sticker?.label ?? '—'}
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => onAdjust(id, -1)}
-                  className="h-9 w-9 rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-300 transition active:scale-95"
+                  className="h-9 w-9 rounded-lg border border-navy-outline/40 bg-navy-surface/60 text-on-surface-variant transition active:scale-95"
                 >
                   −
                 </button>
-                <span className="w-9 text-center font-mono text-base tabular-nums text-white">
+                <span className="w-9 text-center font-mono text-base tabular-nums text-on-surface">
                   {count}
                 </span>
                 <button
                   onClick={() => onAdjust(id, +1)}
-                  className="h-9 w-9 rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-300 transition active:scale-95"
+                  className="h-9 w-9 rounded-lg border border-navy-outline/40 bg-navy-surface/60 text-on-surface-variant transition active:scale-95"
                 >
                   +
                 </button>
@@ -494,9 +494,13 @@ function BacksResultPanel({
       <button
         onClick={onConfirm}
         disabled={totalCopias === 0}
-        className="w-full rounded-xl bg-brand-500 px-5 py-4 font-medium text-white transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-neutral-700"
+        className="bg-fifa-pitch-gradient shadow-fifa-glow w-full rounded-2xl p-[2px] transition active:scale-[0.99] disabled:opacity-40"
       >
-        Adicionar {totalCopias} cópia{totalCopias === 1 ? '' : 's'} ao estoque
+        <div className="rounded-[14px] bg-navy-bg/85 px-5 py-3 text-center backdrop-blur">
+          <span className="text-sm font-bold text-white">
+            Adicionar {totalCopias} cópia{totalCopias === 1 ? '' : 's'} ao estoque
+          </span>
+        </div>
       </button>
 
       <DebugRaw result={result} />
@@ -513,12 +517,12 @@ function EmptyResult({
 }) {
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-amber-900 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
+      <div className="rounded-xl border border-trophy-gold/30 bg-trophy-gold/5 px-4 py-3 text-sm text-trophy-gold backdrop-blur">
         Nenhum código detectado. Fonte: <strong>{result.source}</strong>. Tente refazer a foto
         com mais luz e enquadramento.
       </div>
       {geminiError && (
-        <div className="rounded-xl border border-red-900 bg-red-950/20 px-4 py-3 text-xs text-red-300">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-300 backdrop-blur">
           <div className="font-semibold text-red-200">Gemini falhou, caiu no Tesseract:</div>
           <div className="mt-1 break-words">{geminiError}</div>
         </div>
@@ -526,7 +530,7 @@ function EmptyResult({
       <DebugRaw result={result} />
       <Link
         to="/capture"
-        className="block rounded-xl bg-brand-500 px-4 py-3 text-center font-medium text-white"
+        className="block rounded-xl bg-fifa-blue px-4 py-3 text-center font-medium text-white shadow-fifa-glow"
       >
         Refazer captura
       </Link>
@@ -536,11 +540,11 @@ function EmptyResult({
 
 function DebugRaw({ result }: { result: RecognitionResult }) {
   return (
-    <details className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-3 text-xs">
-      <summary className="cursor-pointer text-neutral-400">
+    <details className="glass-card rounded-xl p-3 text-xs">
+      <summary className="cursor-pointer text-on-surface-variant">
         Debug ({result.source} · {result.mode}): toque pra expandir
       </summary>
-      <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-tight text-neutral-500">
+      <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-tight text-on-surface-variant/70">
         {result.rawText.trim() || '(vazio)'}
       </pre>
     </details>
