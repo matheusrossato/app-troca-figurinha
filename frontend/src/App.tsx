@@ -5,6 +5,7 @@ import Capture from './pages/Capture'
 import Collection from './pages/Collection'
 import Review from './pages/Review'
 import Settings from './pages/Settings'
+import Missing from './pages/Missing'
 import { prewarmBackend } from './lib/gemini'
 import { getPendingAnalysis, subscribePending, type PendingAnalysisRecord } from './db'
 
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/review" element={<Review />} />
           <Route path="/collection" element={<Collection />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/missing" element={<Missing />} />
         </Routes>
       </main>
 

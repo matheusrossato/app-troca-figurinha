@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { clearAll, getAllOwned, replaceAll, type OwnedSticker } from '../db'
 import { useCollection } from '../hooks/useCollection'
 import { ALBUM_TOTAL } from '../data/album'
@@ -71,6 +72,15 @@ export default function Settings() {
 
   return (
     <div className="space-y-3">
+      <Section title="Imprimir / exportar lista">
+        <Link
+          to="/missing"
+          className="block rounded-xl border border-fifa-blue/40 bg-fifa-blue/10 px-4 py-3 text-center text-sm font-medium text-fifa-blue-soft transition active:scale-[0.99]"
+        >
+          🖨️ Lista de figurinhas faltantes
+        </Link>
+      </Section>
+
       <Section title="Backup">
         <p className="mb-3 text-sm text-on-surface-variant">
           {stats.tidas} figurinhas tidas · {stats.totalCopias} cópias totais.
