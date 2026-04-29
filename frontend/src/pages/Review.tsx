@@ -138,6 +138,7 @@ function ResultPanel({
         <div className="rounded-xl border border-amber-900 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
           Nenhum código detectado. Tente refazer a foto com mais luz e enquadramento da página inteira.
         </div>
+        <DebugRaw result={result} />
         <Link
           to="/capture"
           className="block rounded-xl bg-brand-500 px-4 py-3 text-center font-medium text-white"
@@ -151,7 +152,7 @@ function ResultPanel({
   return (
     <div className="space-y-3">
       <div className="text-xs text-neutral-500">
-        {result.ids.length} detectada{result.ids.length === 1 ? '' : 's'} em {Math.round(result.durationMs)}ms
+        {result.ids.length} detectada{result.ids.length === 1 ? '' : 's'} · {result.passes} passe{result.passes === 1 ? '' : 's'} · conf {Math.round(result.confidence)}% · {Math.round(result.durationMs)}ms
       </div>
 
       <ul className="grid grid-cols-2 gap-2">
@@ -185,6 +186,21 @@ function ResultPanel({
       >
         Salvar {selected.size} figurinha{selected.size === 1 ? '' : 's'}
       </button>
+
+      <DebugRaw result={result} />
     </div>
+  )
+}
+
+function DebugRaw({ result }: { result: OcrResult }) {
+  return (
+    <details className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-3 text-xs">
+      <summary className="cursor-pointer text-neutral-400">
+        Debug: o que o OCR leu (toque pra expandir)
+      </summary>
+      <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-tight text-neutral-500">
+        {result.rawText.trim() || '(vazio)'}
+      </pre>
+    </details>
   )
 }

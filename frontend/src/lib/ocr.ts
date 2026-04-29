@@ -12,10 +12,14 @@ export interface DetectedId {
 
 export interface OcrResult {
   ids: DetectedId[]
-  /** Texto bruto completo, útil pra debug. */
+  /** Texto bruto completo (concatenação dos passes), útil pra debug. */
   rawText: string
   /** Tempo de processamento em ms. */
   durationMs: number
+  /** Confiança média do passe que mais detectou IDs. */
+  confidence: number
+  /** Quantos passes Tesseract rodou. */
+  passes: number
 }
 
 let workerPromise: Promise<Tesseract.Worker> | null = null
@@ -30,12 +34,13 @@ async function getWorker(onProgress?: (p: number) => void): Promise<Tesseract.Wo
           }
         },
       })
+      // PSM 11 = "sparse text" — funciona melhor que PSM 6 quando o texto
+      // não está em um bloco contínuo, e sim espalhado pela página
+      // (que é exatamente o caso das páginas do álbum, com códigos como
+      // "BRA 1", "BRA 13" distribuídos em uma grade com cores e sombras).
       await w.setParameters({
-        // Códigos do álbum são alfanuméricos curtos (BRA7, FWC3, FM11).
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-        // PSM 6 = bloco uniforme de texto. Bom pra páginas de álbum onde
-        // os IDs aparecem em grade. Ajustável depois com base em testes reais.
-        tessedit_pageseg_mode: '6' as unknown as Tesseract.PSM,
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ',
+        tessedit_pageseg_mode: '11' as unknown as Tesseract.PSM,
       })
       return w
     })()
@@ -43,33 +48,77 @@ async function getWorker(onProgress?: (p: number) => void): Promise<Tesseract.Wo
   return workerPromise
 }
 
+interface Variant {
+  canvas: HTMLCanvasElement
+  label: string
+}
+
 /**
- * Pré-processa o blob para aumentar contraste e contraste antes do OCR.
- * Tesseract funciona melhor com fundo branco e texto preto. Aplicamos
- * grayscale + binarização adaptativa simples. Não é mágica, mas ajuda.
+ * Gera variantes da imagem otimizadas para o tipo de tipografia das páginas
+ * do álbum (números brancos grossos sobre fundo colorido com sombra):
+ *   - "high-contrast"  → grayscale + estiramento de contraste
+ *   - "inverted"       → versão invertida (texto branco vira preto)
+ *
+ * Tesseract roda em ambas e a gente une os resultados.
  */
-async function preprocess(blob: Blob): Promise<HTMLCanvasElement> {
+async function makeVariants(blob: Blob): Promise<Variant[]> {
   const bitmap = await createImageBitmap(blob)
-  const maxDim = 1600
+  // Texto grande lê melhor em alta resolução; aceita até 2400px no maior lado.
+  const maxDim = 2400
   const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
   const w = Math.round(bitmap.width * scale)
   const h = Math.round(bitmap.height * scale)
 
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(bitmap, 0, 0, w, h)
+  const baseCanvas = document.createElement('canvas')
+  baseCanvas.width = w
+  baseCanvas.height = h
+  const baseCtx = baseCanvas.getContext('2d')!
+  baseCtx.drawImage(bitmap, 0, 0, w, h)
+  const baseImg = baseCtx.getImageData(0, 0, w, h)
 
-  const img = ctx.getImageData(0, 0, w, h)
-  const data = img.data
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
-    const v = gray > 150 ? 255 : gray < 90 ? 0 : gray
-    data[i] = data[i + 1] = data[i + 2] = v
+  // Calcula min/max em grayscale para estirar contraste corretamente.
+  const grays = new Uint8ClampedArray(w * h)
+  let gMin = 255
+  let gMax = 0
+  for (let i = 0, p = 0; i < baseImg.data.length; i += 4, p++) {
+    const g = (0.299 * baseImg.data[i] + 0.587 * baseImg.data[i + 1] + 0.114 * baseImg.data[i + 2]) | 0
+    grays[p] = g
+    if (g < gMin) gMin = g
+    if (g > gMax) gMax = g
   }
-  ctx.putImageData(img, 0, 0)
-  return canvas
+  const range = Math.max(1, gMax - gMin)
+
+  // Variant 1: grayscale com contraste estirado (texto preto em fundo branco).
+  const hcCanvas = document.createElement('canvas')
+  hcCanvas.width = w
+  hcCanvas.height = h
+  const hcCtx = hcCanvas.getContext('2d')!
+  const hcImg = hcCtx.createImageData(w, h)
+  for (let p = 0, i = 0; p < grays.length; p++, i += 4) {
+    const v = ((grays[p] - gMin) / range) * 255
+    hcImg.data[i] = hcImg.data[i + 1] = hcImg.data[i + 2] = v
+    hcImg.data[i + 3] = 255
+  }
+  hcCtx.putImageData(hcImg, 0, 0)
+
+  // Variant 2: invertido — texto branco vira escuro, ideal pra códigos brancos
+  // do álbum em fundo claro.
+  const invCanvas = document.createElement('canvas')
+  invCanvas.width = w
+  invCanvas.height = h
+  const invCtx = invCanvas.getContext('2d')!
+  const invImg = invCtx.createImageData(w, h)
+  for (let p = 0, i = 0; p < grays.length; p++, i += 4) {
+    const v = 255 - ((grays[p] - gMin) / range) * 255
+    invImg.data[i] = invImg.data[i + 1] = invImg.data[i + 2] = v
+    invImg.data[i + 3] = 255
+  }
+  invCtx.putImageData(invImg, 0, 0)
+
+  return [
+    { canvas: hcCanvas, label: 'high-contrast' },
+    { canvas: invCanvas, label: 'inverted' },
+  ]
 }
 
 /**
@@ -80,7 +129,7 @@ async function preprocess(blob: Blob): Promise<HTMLCanvasElement> {
  */
 export function extractStickerIds(rawText: string): { id: string; raw: string }[] {
   const found = new Map<string, string>()
-  const pattern = /\b([A-Z]{2,3})\s*[-_ ]?\s*0*(\d{1,2})\b/g
+  const pattern = /([A-Z]{2,3})\s*[-_ ]?\s*0*(\d{1,2})/g
   const upper = rawText.toUpperCase()
   let m: RegExpExecArray | null
   while ((m = pattern.exec(upper))) {
@@ -99,20 +148,31 @@ export async function recognizeStickerIds(
 ): Promise<OcrResult> {
   const start = performance.now()
   const worker = await getWorker(onProgress)
-  const canvas = await preprocess(blob)
-  const { data } = await worker.recognize(canvas)
+  const variants = await makeVariants(blob)
 
-  const matches = extractStickerIds(data.text)
-  const ids: DetectedId[] = matches.map(({ id, raw }) => ({
-    id,
-    raw,
-    confidence: data.confidence,
-  }))
+  const accumulated = new Map<string, { id: string; raw: string; confidence: number }>()
+  const rawTexts: string[] = []
+  let bestConfidence = 0
+
+  for (const variant of variants) {
+    const { data } = await worker.recognize(variant.canvas)
+    rawTexts.push(`--- ${variant.label} (conf ${data.confidence.toFixed(0)}) ---\n${data.text}`)
+    if (data.confidence > bestConfidence) bestConfidence = data.confidence
+    for (const m of extractStickerIds(data.text)) {
+      if (!accumulated.has(m.id)) {
+        accumulated.set(m.id, { ...m, confidence: data.confidence })
+      }
+    }
+  }
+
+  const ids: DetectedId[] = Array.from(accumulated.values())
 
   return {
     ids,
-    rawText: data.text,
+    rawText: rawTexts.join('\n\n'),
     durationMs: performance.now() - start,
+    confidence: bestConfidence,
+    passes: variants.length,
   }
 }
 
@@ -131,9 +191,6 @@ export function summarizeOcr(result: OcrResult): string {
   return result.ids.map((d) => d.id).join(', ')
 }
 
-// Tipos referenciados estão disponíveis em runtime; manter import só no tipo.
 export type { Tesseract }
 
-// Garante que catálogo foi inicializado (lança no boot se modelo do álbum
-// estiver inconsistente).
 void STICKERS_BY_ID
