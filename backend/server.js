@@ -20,7 +20,7 @@ const model = genAI.getGenerativeModel({
   model: 'gemini-2.5-flash',
   generationConfig: {
     responseMimeType: 'application/json',
-    temperature: 0.1,
+    temperature: 0,
   },
 })
 
@@ -59,6 +59,54 @@ Retorne APENAS um objeto JSON SEM markdown e SEM comentários:
 Onde "id" é o código canônico em maiúsculas, SEM espaços ou hífens. Se não tiver certeza absoluta de um código, omita.`
 
 const PAGE_PROMPT = `Analise esta foto de uma página do álbum Panini FIFA World Cup 2026.
+
+============================================================
+🛑 REGRA #1 — VAZIO vs COLADO (LEIA ANTES DE QUALQUER COISA)
+============================================================
+
+Pra CADA slot da página, faça este algoritmo de decisão NA ORDEM:
+
+  Passo 1: Eu consigo ler "XXX N" GRANDE (números enormes, ocupando boa
+           parte do slot) impresso no meio do slot?
+           — XXX = 3 letras (BRA, MAR, RSA, CZE, FWC, CC...)
+           — N = número 1-20
+
+           SE SIM → slot está VAZIO (filled=false). PARE AQUI.
+                    NÃO IMPORTA a cor de fundo (laranja vibrante, verde,
+                    vermelho, roxo, gradient — TUDO é só template visual).
+                    NÃO IMPORTA se tem texto descritivo (nome do jogador,
+                    "Mascotes Oficiais") embaixo — também faz parte do
+                    template do slot vazio.
+
+  Passo 2: Vejo um ROSTO HUMANO REAL com pele, olhos, cabelo, ocupando
+           a parte de cima do slot, com nome impresso embaixo da foto?
+
+           SE SIM → slot está COLADO com figurinha de jogador (filled=true).
+
+  Passo 3: É o slot 1 (topo da página esquerda) e vejo um BRASÃO/ESCUDO
+           OFICIAL com efeito METALIZADO/HOLOGRÁFICO (textura iridescente,
+           brilhante, com vários tons reflexivos)?
+
+           SE SIM → slot 1 está COLADO com escudo (filled=true).
+           SE NÃO (vejo "BRA 1" grande sobre um fundo verde/amarelo de
+           template) → VAZIO. Cor de fundo NÃO É escudo. Cor de fundo é
+           SEMPRE só design da página.
+
+  Passo 4: Slot FWC ou CC sem foto humana e sem texto "XXX N" visível,
+           tem hologram com imagem temática (taça, bola, mascotes, etc.)?
+
+           SE SIM → COLADO. Inferir ID pela imagem + posição na página.
+
+❌ ERROS A NÃO COMETER (já vi você errar isso):
+- Detectar BRA1 colado em página do Brasil porque o slot tem fundo
+  verde/amarelo. ERRADO. Se vê "BRA 1" grande, é VAZIO.
+- Detectar MAR N colados porque a página é laranja vibrante. ERRADO.
+  Se vê "MAR N" grande, é VAZIO.
+- Detectar RSA1/CZE1 colados pela cor do template. ERRADO.
+
+✅ Heurística simples: cor de fundo NUNCA decide. O que decide é se você
+   vê o número grande "XXX N" (= vazio) ou foto humana / brasão metalizado
+   (= colado).
 
 ============================================================
 ESTRUTURA DO ÁLBUM (993 figurinhas, 113 páginas)
@@ -110,24 +158,12 @@ CÓDIGOS VÁLIDOS (qualquer outro = inválido, omita)
 - NÃO EXISTE prefixo "FM" — se ler "FM N" no álbum, ignore (foi convenção antiga).
 
 ============================================================
-VAZIO vs COLADO — REGRA OURO (não erre essa)
+VAZIO vs COLADO — referência (regra completa está no topo)
 ============================================================
-A regra DEFINITIVA pra distinguir slot vazio de slot colado é o TEXTO IMPRESSO:
-
-- Slot VAZIO: TEM o código "XXX N" impresso GRANDE no centro do slot (números altos, talvez ocupando metade do espaço), opcionalmente com texto descritivo embaixo (nome do jogador planejado, "Mascotes Oficiais", "Slogan Oficial"). A cor de fundo do slot pode ser QUALQUER UMA — laranja, verde, roxo, azul, amarelo etc. — isso NÃO indica que está colado. Se você vê "RSA 1" ou "CZE 1" grande no slot, é VAZIO mesmo que o fundo seja colorido vibrante.
-
-- Slot COLADO de jogador: FOTO REAL DO JOGADOR (rosto humano, pele, cabelo) + escudo da seleção pequeno + nome impresso embaixo da foto. NUNCA tem o "XXX N" grande visível porque a figurinha cobre.
-
-- Slot COLADO de ESCUDO (slot 1, sempre topo da página esquerda): figurinha METALIZADA/HOLOGRÁFICA com o BRASÃO OFICIAL DA SELEÇÃO (símbolo distintivo como o escudo SAFA da África do Sul, FACR da Tchéquia, CBF do Brasil etc.). Tem reflexos brilhantes/iridescentes característicos. NUNCA confunda a cor de fundo do template do slot vazio com o efeito metalizado — o metalizado é uma TEXTURA REFLETIVA com vários tons, não cor sólida.
-
-- Slot COLADO FWC/CC: imagem temática + hologram, geralmente SEM código visível. Inferir pela imagem e pela posição relativa na página, usando o layout acima como referência.
-
-ERROS COMUNS A EVITAR:
-1. "Cor verde/laranja/colorida = slot colado" — FALSO. Cor de fundo do template é só design da página, não indica figurinha.
-2. "Slot 1 (escudo) sempre tem cor diferente = colado" — FALSO. O slot vazio do escudo também tem cor de fundo do template.
-3. Se o número "XXX N" está visível e legível, FORÇOSAMENTE filled=false. Sem exceção.
-
-Identifique TODOS os slots da página (vazios E colados). Quando colado sem código visível, retorne o ID mais provável + filled=true.
+Veja "REGRA #1" no topo deste prompt. Resumo:
+- Vê "XXX N" grande → VAZIO (filled=false), independente da cor de fundo.
+- Vê foto humana / brasão metalizado → COLADO (filled=true).
+- FWC/CC colados sem código: inferir pelo layout + imagem.
 
 ============================================================
 SCHEMA DE RESPOSTA (JSON puro, sem markdown)
