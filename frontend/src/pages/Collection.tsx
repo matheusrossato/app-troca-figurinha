@@ -1,21 +1,61 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ALL_STICKERS, TEAMS, type Sticker } from '../data/album'
 import { useCollection } from '../hooks/useCollection'
 import { decrementSticker, incrementSticker } from '../db'
 
 type Filter = 'all' | 'owned' | 'missing' | 'duplicates'
 
+interface SectionOption {
+  code: string
+  label: string
+  /** texto pra busca (lowercase, sem acento) */
+  search: string
+}
+
+const SECTION_OPTIONS: SectionOption[] = [
+  {
+    code: 'FWC',
+    label: '⭐ FIFA World Cup (FWC) — intro + Museum',
+    search: stripAccents('fwc fifa world cup intro museum especiais'),
+  },
+  ...TEAMS.map((t) => ({
+    code: t.code,
+    label: `${t.flag} ${t.name} · Grupo ${t.group} · ${t.code}`,
+    search: stripAccents(`${t.code} ${t.name} grupo ${t.group}`),
+  })),
+  {
+    code: 'CC',
+    label: '🥤 Coca-Cola (CC) — patrocinados',
+    search: stripAccents('cc coca cola patrocinados'),
+  },
+]
+
+function stripAccents(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+}
+
+function labelFor(code: string): string {
+  return SECTION_OPTIONS.find((o) => o.code === code)?.label ?? code
+}
+
 export default function Collection() {
   const { byId, loading } = useCollection()
   const [filter, setFilter] = useState<Filter>('all')
-  const [teamCode, setTeamCode] = useState<string>('all')
+  const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set())
 
   const list = useMemo(() => {
     return ALL_STICKERS.filter((s) => {
-      if (teamCode !== 'all' && s.code !== teamCode) {
-        if (s.section === 'team') return false
+      // Multi-filtro de seção: vazio = tudo. Cada item escolhido é um OR.
+      if (selectedSections.size > 0) {
+        const ok =
+          (selectedSections.has('FWC') && s.section === 'fwc') ||
+          (selectedSections.has('CC') && s.section === 'cocacola') ||
+          (s.section === 'team' && selectedSections.has(s.code))
+        if (!ok) return false
       }
-      if (teamCode !== 'all' && s.section !== 'team') return false
 
       const owned = byId.get(s.id)
       if (filter === 'owned') return !!owned
@@ -23,12 +63,15 @@ export default function Collection() {
       if (filter === 'duplicates') return !!owned && owned.count > 1
       return true
     })
-  }, [byId, filter, teamCode])
+  }, [byId, filter, selectedSections])
 
   return (
     <div className="space-y-3">
       <FilterBar filter={filter} setFilter={setFilter} />
-      <TeamFilter teamCode={teamCode} setTeamCode={setTeamCode} />
+      <SectionMultiFilter
+        selected={selectedSections}
+        onChange={setSelectedSections}
+      />
 
       <div className="text-xs text-on-surface-variant/70">
         {loading ? 'Carregando…' : `${list.length} figurinhas`}
@@ -75,26 +118,121 @@ function FilterBar({
   )
 }
 
-function TeamFilter({
-  teamCode,
-  setTeamCode,
+/**
+ * Filtro multi-select de seções com busca por digitação.
+ * Selecionados aparecem como chips no topo (clicar remove).
+ * Lista filtra conforme você digita; tap numa opção alterna seleção.
+ * Vazio = "Todas as seções".
+ */
+function SectionMultiFilter({
+  selected,
+  onChange,
 }: {
-  teamCode: string
-  setTeamCode: (c: string) => void
+  selected: Set<string>
+  onChange: (next: Set<string>) => void
 }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Fecha o dropdown ao clicar fora.
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const filtered = useMemo(() => {
+    const q = stripAccents(query.trim())
+    if (!q) return SECTION_OPTIONS
+    return SECTION_OPTIONS.filter((o) => o.search.includes(q))
+  }, [query])
+
+  function toggle(code: string) {
+    const next = new Set(selected)
+    if (next.has(code)) next.delete(code)
+    else next.add(code)
+    onChange(next)
+  }
+
+  function clearAll() {
+    onChange(new Set())
+    setQuery('')
+  }
+
   return (
-    <select
-      value={teamCode}
-      onChange={(e) => setTeamCode(e.target.value)}
-      className="glass-card w-full rounded-xl px-3 py-2 text-sm text-on-surface"
-    >
-      <option value="all">Todas as seções</option>
-      {TEAMS.map((t) => (
-        <option key={t.code} value={t.code}>
-          {t.flag} {t.name} · Grupo {t.group}
-        </option>
-      ))}
-    </select>
+    <div ref={containerRef} className="glass-card relative rounded-xl p-2">
+      {/* Chips das seções selecionadas */}
+      {selected.size > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1">
+          {Array.from(selected).map((code) => (
+            <button
+              key={code}
+              onClick={() => toggle(code)}
+              className="flex items-center gap-1 rounded-full bg-fifa-blue/20 px-2 py-0.5 text-xs text-fifa-blue-soft transition hover:bg-fifa-blue/30"
+            >
+              <span>{labelFor(code)}</span>
+              <span className="text-[10px] opacity-70">✕</span>
+            </button>
+          ))}
+          <button
+            onClick={clearAll}
+            className="rounded-full px-2 py-0.5 text-xs text-on-surface-variant underline hover:text-on-surface"
+          >
+            limpar
+          </button>
+        </div>
+      )}
+
+      {/* Input de busca */}
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          setOpen(true)
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder={
+          selected.size === 0
+            ? 'Todas as seções — toque para filtrar'
+            : 'Adicionar mais seções…'
+        }
+        className="w-full rounded-lg bg-navy-surface/40 px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-fifa-blue/40"
+      />
+
+      {/* Dropdown de opções filtradas */}
+      {open && (
+        <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-80 overflow-auto rounded-xl border border-navy-outline/40 bg-navy-surface-2/95 py-1 shadow-2xl backdrop-blur-xl">
+          {filtered.length === 0 && (
+            <li className="px-3 py-2 text-sm text-on-surface-variant">
+              Nenhuma seção encontrada
+            </li>
+          )}
+          {filtered.map((o) => {
+            const isOn = selected.has(o.code)
+            return (
+              <li key={o.code}>
+                <button
+                  onClick={() => toggle(o.code)}
+                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${
+                    isOn
+                      ? 'bg-fifa-blue/15 text-fifa-blue-soft'
+                      : 'text-on-surface hover:bg-navy-surface-3/60'
+                  }`}
+                >
+                  <span className="truncate">{o.label}</span>
+                  {isOn && <span className="ml-2 text-pitch-green">✓</span>}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
   )
 }
 

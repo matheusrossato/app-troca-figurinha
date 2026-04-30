@@ -225,6 +225,10 @@ if (TEAMS.length !== TEAM_COUNT) {
 export function buildAllStickers(): Sticker[] {
   const all: Sticker[] = []
 
+  // Ordem da listagem: FWC (intro+museum) → 48 seleções → Coca-Cola.
+  // FWC primeiro porque abre o álbum; Coca-Cola por último porque fecha
+  // (págs 112-113, contracapa).
+
   for (const [i, slot] of FWC_LAYOUT.entries()) {
     all.push({
       id: slot.id,
@@ -234,19 +238,6 @@ export function buildAllStickers(): Sticker[] {
       isSpecial: true,
       label: slot.label,
       slot: 'fwc',
-      page: slot.page,
-    })
-  }
-
-  for (const [i, slot] of CC_LAYOUT.entries()) {
-    all.push({
-      id: slot.id,
-      section: 'cocacola',
-      code: CC_CODE,
-      index: i + 1,
-      isSpecial: true,
-      label: slot.label,
-      slot: 'cocacola',
       page: slot.page,
     })
   }
@@ -277,6 +268,19 @@ export function buildAllStickers(): Sticker[] {
         page: i <= 10 ? team.startPage : team.startPage + 1,
       })
     }
+  }
+
+  for (const [i, slot] of CC_LAYOUT.entries()) {
+    all.push({
+      id: slot.id,
+      section: 'cocacola',
+      code: CC_CODE,
+      index: i + 1,
+      isSpecial: true,
+      label: slot.label,
+      slot: 'cocacola',
+      page: slot.page,
+    })
   }
 
   return all
