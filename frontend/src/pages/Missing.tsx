@@ -119,40 +119,30 @@ export default function Missing() {
             <h2 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-trophy-gold print:text-black">
               Especiais
             </h2>
-            {data.fwcMissing.length > 0 && (
-              <div className="mb-2 text-sm">
-                <div className="mb-0.5 text-[11px] font-semibold text-on-surface-variant print:text-gray-600">
-                  FWC ({data.fwcMissing.length}):
-                </div>
-                <ul className="space-y-0.5">
-                  {data.fwcMissing.map((s) => (
-                    <li key={s.id} className="text-xs text-on-surface print:text-black">
-                      <span className="font-mono font-semibold">{s.id}</span>
-                      <span className="ml-2 text-on-surface-variant print:text-gray-700">
-                        {s.label}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {data.ccMissing.length > 0 && (
-              <div className="text-sm">
-                <div className="mb-0.5 text-[11px] font-semibold text-on-surface-variant print:text-gray-600">
-                  Coca-Cola ({data.ccMissing.length}):
-                </div>
-                <ul className="space-y-0.5">
-                  {data.ccMissing.map((s) => (
-                    <li key={s.id} className="text-xs text-on-surface print:text-black">
-                      <span className="font-mono font-semibold">{s.id}</span>
-                      <span className="ml-2 text-on-surface-variant print:text-gray-700">
-                        {s.label}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <ul className="space-y-1">
+              {data.fwcMissing.length > 0 && (
+                <li className="text-xs leading-snug">
+                  <span className="font-bold text-on-surface print:text-black">⭐ FWC</span>
+                  <span className="ml-1 text-on-surface-variant print:text-gray-600">
+                    ({data.fwcMissing.length}):
+                  </span>
+                  <span className="ml-1 font-mono text-on-surface print:text-black">
+                    {data.fwcMissing.map((s) => s.id.replace(/^FWC/, '')).join(', ')}
+                  </span>
+                </li>
+              )}
+              {data.ccMissing.length > 0 && (
+                <li className="text-xs leading-snug">
+                  <span className="font-bold text-on-surface print:text-black">🥤 CC</span>
+                  <span className="ml-1 text-on-surface-variant print:text-gray-600">
+                    ({data.ccMissing.length}):
+                  </span>
+                  <span className="ml-1 font-mono text-on-surface print:text-black">
+                    {data.ccMissing.map((s) => s.id.replace(/^CC/, '')).join(', ')}
+                  </span>
+                </li>
+              )}
+            </ul>
           </section>
         )}
 
