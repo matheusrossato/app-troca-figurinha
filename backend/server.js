@@ -64,49 +64,56 @@ const PAGE_PROMPT = `Analise esta foto de uma página do álbum Panini FIFA Worl
 🛑 REGRA #1 — VAZIO vs COLADO (LEIA ANTES DE QUALQUER COISA)
 ============================================================
 
-Pra CADA slot da página, faça este algoritmo de decisão NA ORDEM:
+ANATOMIA DE UM SLOT VAZIO (memorize esse layout vertical):
+  ┌─────────────────────┐
+  │      ↑   XXX        │  ← sigla de 3 letras (BRA, MAR, RSA, CZE...)
+  │      |              │     em cima do slot, FONTE MÉDIA
+  │      |    N         │  ← número 1-20, FONTE GIGANTE (ocupa metade
+  │      ↓              │     do slot, dominante visualmente)
+  │  NOME DO JOGADOR    │  ← nome em fonte pequena embaixo
+  └─────────────────────┘
+Se você vê esses 3 elementos empilhados (sigla + número grande + nome),
+o slot está VAZIO. Cor de fundo do template (verde, laranja, roxo etc.)
+é IRRELEVANTE — só design.
 
-  Passo 1: Eu consigo ler "XXX N" GRANDE (números enormes, ocupando boa
-           parte do slot) impresso no meio do slot?
-           — XXX = 3 letras (BRA, MAR, RSA, CZE, FWC, CC...)
-           — N = número 1-20
+ANATOMIA DE UM SLOT COLADO COM FIGURINHA DE JOGADOR (slots 2-12, 14-20):
+  ┌─────────────────────┐
+  │   👤 (rosto humano) │  ← foto real do jogador (pele, olhos, cabelo)
+  │     com camisa      │     ocupando ~70% do slot
+  │  ─────────────────  │
+  │ ESCUDO  Nome  PUMA  │  ← rodapé com escudo pequeno + nome + Panini/marca
+  └─────────────────────┘
+NÃO tem mais a sigla "XXX" nem o "N" grande visível — a figurinha cobre.
 
-           SE SIM → slot está VAZIO (filled=false). PARE AQUI.
-                    NÃO IMPORTA a cor de fundo (laranja vibrante, verde,
-                    vermelho, roxo, gradient — TUDO é só template visual).
-                    NÃO IMPORTA se tem texto descritivo (nome do jogador,
-                    "Mascotes Oficiais") embaixo — também faz parte do
-                    template do slot vazio.
+EXCEÇÕES (slots especiais):
+- SLOT 1 (sempre topo da página esquerda): quando colado, mostra o
+  ESCUDO METALIZADO da seleção (brasão oficial, holográfico, iridescente
+  — ex: CBF do Brasil, FACR da Tchéquia, SAFA da África do Sul). NÃO é
+  rosto humano. Quando VAZIO mostra "XXX 1" grande sobre o template.
+- SLOT 13 (meio da página direita): quando colado, mostra a FOTO DA
+  EQUIPE (grupo de ~22 jogadores em pé/agachados em campo) + nome do
+  país em vários idiomas (ex: "Brazil | Brasil | Brésil | Brasilien |
+  Brasile | Brazylia | Бразилия"). Quando VAZIO mostra "XXX 13" grande.
 
-  Passo 2: Vejo um ROSTO HUMANO REAL com pele, olhos, cabelo, ocupando
-           a parte de cima do slot, com nome impresso embaixo da foto?
+ALGORITMO PRA CADA SLOT:
+  1. Vejo a TRÍADE "sigla XXX + número N grande + nome de jogador"
+     empilhados verticalmente?  → VAZIO (filled=false). Pare.
+  2. Vejo um ROSTO HUMANO ocupando o slot?  → COLADO de jogador.
+  3. É slot 1 e vejo um BRASÃO METALIZADO iridescente?  → COLADO escudo.
+  4. É slot 13 e vejo um GRUPO de jogadores + nomes multilíngues?
+     → COLADO foto da equipe.
+  5. É FWC/CC e vejo imagem temática com hologram?  → COLADO especial.
 
-           SE SIM → slot está COLADO com figurinha de jogador (filled=true).
+❌ ERROS QUE VOCÊ JÁ COMETEU (e não pode repetir):
+- BRA1 detectado colado porque o slot tem fundo verde/amarelo. ERRADO.
+  Tem "BRA" + "1" gigante + "ALISSON" → VAZIO.
+- MAR N detectado colado porque a página é laranja vibrante. ERRADO.
+  Cada slot vazio dali tem "MAR" + "N" + nome — VAZIO.
+- RSA1, CZE1 detectados colados pela cor de template. ERRADO.
 
-  Passo 3: É o slot 1 (topo da página esquerda) e vejo um BRASÃO/ESCUDO
-           OFICIAL com efeito METALIZADO/HOLOGRÁFICO (textura iridescente,
-           brilhante, com vários tons reflexivos)?
-
-           SE SIM → slot 1 está COLADO com escudo (filled=true).
-           SE NÃO (vejo "BRA 1" grande sobre um fundo verde/amarelo de
-           template) → VAZIO. Cor de fundo NÃO É escudo. Cor de fundo é
-           SEMPRE só design da página.
-
-  Passo 4: Slot FWC ou CC sem foto humana e sem texto "XXX N" visível,
-           tem hologram com imagem temática (taça, bola, mascotes, etc.)?
-
-           SE SIM → COLADO. Inferir ID pela imagem + posição na página.
-
-❌ ERROS A NÃO COMETER (já vi você errar isso):
-- Detectar BRA1 colado em página do Brasil porque o slot tem fundo
-  verde/amarelo. ERRADO. Se vê "BRA 1" grande, é VAZIO.
-- Detectar MAR N colados porque a página é laranja vibrante. ERRADO.
-  Se vê "MAR N" grande, é VAZIO.
-- Detectar RSA1/CZE1 colados pela cor do template. ERRADO.
-
-✅ Heurística simples: cor de fundo NUNCA decide. O que decide é se você
-   vê o número grande "XXX N" (= vazio) ou foto humana / brasão metalizado
-   (= colado).
+✅ Resumo: cor de fundo NUNCA decide. O que decide é a presença da
+   tríade "sigla + número grande + nome" (= vazio) vs foto humana /
+   brasão metalizado / foto de equipe / imagem temática FWC/CC (= colado).
 
 ============================================================
 ESTRUTURA DO ÁLBUM (993 figurinhas, 113 páginas)
