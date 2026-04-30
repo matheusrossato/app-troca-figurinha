@@ -551,11 +551,15 @@ function PageResultPanel({
             containerCls = isOn
               ? 'border-fifa-blue bg-fifa-blue/15 text-white'
               : 'border-dashed border-navy-outline/40 bg-navy-surface/30 text-on-surface-variant/60'
-          } else if (isFilled) {
+          } else if (isFilled && isOn) {
+            // Detectada como nova E ainda marcada → destaca como "nova" dourado.
             tag = { label: 'nova', cls: 'text-trophy-gold' }
-            containerCls = isOn
-              ? 'border-fifa-blue bg-fifa-blue/15 text-white'
-              : 'border-trophy-gold/40 bg-trophy-gold/5 text-trophy-gold'
+            containerCls = 'border-fifa-blue bg-fifa-blue/15 text-white'
+          } else if (isFilled && !isOn) {
+            // Detectada como nova mas usuário desmarcou → "ignorada", visual neutro.
+            tag = { label: 'ignorada', cls: 'text-on-surface-variant/50' }
+            containerCls =
+              'border-navy-outline/30 bg-navy-surface/40 text-on-surface-variant'
           } else {
             tag = { label: 'vazio', cls: 'text-on-surface-variant/50' }
             containerCls = isOn
