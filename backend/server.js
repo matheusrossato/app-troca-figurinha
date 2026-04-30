@@ -110,11 +110,22 @@ CÓDIGOS VÁLIDOS (qualquer outro = inválido, omita)
 - NÃO EXISTE prefixo "FM" — se ler "FM N" no álbum, ignore (foi convenção antiga).
 
 ============================================================
-VAZIO vs COLADO
+VAZIO vs COLADO — REGRA OURO (não erre essa)
 ============================================================
-- Slot VAZIO: mostra o código impresso (ex: "MEX 7", "FWC 3", "CC 5") + texto descritivo (nome do jogador, "Mascotes Oficiais", "Slogan Oficial", etc.).
-- Slot COLADO de jogador: foto do jogador + escudo. Inferir ID pelo nome embaixo ou posição.
+A regra DEFINITIVA pra distinguir slot vazio de slot colado é o TEXTO IMPRESSO:
+
+- Slot VAZIO: TEM o código "XXX N" impresso GRANDE no centro do slot (números altos, talvez ocupando metade do espaço), opcionalmente com texto descritivo embaixo (nome do jogador planejado, "Mascotes Oficiais", "Slogan Oficial"). A cor de fundo do slot pode ser QUALQUER UMA — laranja, verde, roxo, azul, amarelo etc. — isso NÃO indica que está colado. Se você vê "RSA 1" ou "CZE 1" grande no slot, é VAZIO mesmo que o fundo seja colorido vibrante.
+
+- Slot COLADO de jogador: FOTO REAL DO JOGADOR (rosto humano, pele, cabelo) + escudo da seleção pequeno + nome impresso embaixo da foto. NUNCA tem o "XXX N" grande visível porque a figurinha cobre.
+
+- Slot COLADO de ESCUDO (slot 1, sempre topo da página esquerda): figurinha METALIZADA/HOLOGRÁFICA com o BRASÃO OFICIAL DA SELEÇÃO (símbolo distintivo como o escudo SAFA da África do Sul, FACR da Tchéquia, CBF do Brasil etc.). Tem reflexos brilhantes/iridescentes característicos. NUNCA confunda a cor de fundo do template do slot vazio com o efeito metalizado — o metalizado é uma TEXTURA REFLETIVA com vários tons, não cor sólida.
+
 - Slot COLADO FWC/CC: imagem temática + hologram, geralmente SEM código visível. Inferir pela imagem e pela posição relativa na página, usando o layout acima como referência.
+
+ERROS COMUNS A EVITAR:
+1. "Cor verde/laranja/colorida = slot colado" — FALSO. Cor de fundo do template é só design da página, não indica figurinha.
+2. "Slot 1 (escudo) sempre tem cor diferente = colado" — FALSO. O slot vazio do escudo também tem cor de fundo do template.
+3. Se o número "XXX N" está visível e legível, FORÇOSAMENTE filled=false. Sem exceção.
 
 Identifique TODOS os slots da página (vazios E colados). Quando colado sem código visível, retorne o ID mais provável + filled=true.
 
