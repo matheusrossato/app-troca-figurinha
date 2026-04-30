@@ -1,9 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ALL_STICKERS, TEAMS, type Sticker } from '../data/album'
+import {
+  ALL_STICKERS,
+  CC_LAYOUT,
+  FWC_LAYOUT,
+  STICKERS_PER_TEAM,
+  TEAMS,
+  type Sticker,
+} from '../data/album'
 import { useCollection } from '../hooks/useCollection'
-import { decrementSticker, incrementSticker } from '../db'
+import { decrementSticker, incrementSticker, type OwnedSticker } from '../db'
 
-type Filter = 'all' | 'owned' | 'missing' | 'duplicates'
+type Filter = 'summary' | 'all' | 'missing' | 'duplicates'
+
+interface SectionStats {
+  code: string
+  label: string
+  flag: string
+  total: number
+  tidas: number
+  faltantes: number
+  repetidas: number
+}
 
 interface SectionOption {
   code: string
@@ -41,12 +58,148 @@ function labelFor(code: string): string {
   return SECTION_OPTIONS.find((o) => o.code === code)?.label ?? code
 }
 
+/**
+ * Resumo agrupado por seção: FWC + 48 seleções + Coca-Cola.
+ * Cada linha mostra tidas/total + faltantes + repetidas, com mini progress bar.
+ * Tap numa linha = troca pra view "Todas" filtrada por essa seção.
+ */
+function SummaryView({
+  byId,
+  loading,
+  onSectionTap,
+}: {
+  byId: Map<string, OwnedSticker>
+  loading: boolean
+  onSectionTap: (code: string) => void
+}) {
+  const sections: SectionStats[] = useMemo(() => {
+    const out: SectionStats[] = []
+
+    out.push(buildStats('FWC', '⭐ FIFA World Cup', '⭐', FWC_LAYOUT.map((s) => s.id), byId))
+
+    for (const t of TEAMS) {
+      const ids: string[] = []
+      for (let i = 1; i <= STICKERS_PER_TEAM; i++) ids.push(`${t.code}${i}`)
+      out.push(buildStats(t.code, `${t.name} · Grupo ${t.group}`, t.flag, ids, byId))
+    }
+
+    out.push(buildStats('CC', '🥤 Coca-Cola', '🥤', CC_LAYOUT.map((s) => s.id), byId))
+
+    return out
+  }, [byId])
+
+  if (loading) {
+    return (
+      <div className="text-center text-sm text-on-surface-variant py-8">
+        Carregando…
+      </div>
+    )
+  }
+
+  return (
+    <ul className="space-y-1.5">
+      {sections.map((s) => (
+        <SummaryRow key={s.code} stats={s} onTap={() => onSectionTap(s.code)} />
+      ))}
+    </ul>
+  )
+}
+
+function buildStats(
+  code: string,
+  label: string,
+  flag: string,
+  ids: string[],
+  byId: Map<string, OwnedSticker>,
+): SectionStats {
+  let tidas = 0
+  let repetidas = 0
+  for (const id of ids) {
+    const owned = byId.get(id)
+    if (!owned) continue
+    tidas++
+    if (owned.count > 1) repetidas += owned.count - 1
+  }
+  return {
+    code,
+    label,
+    flag,
+    total: ids.length,
+    tidas,
+    faltantes: ids.length - tidas,
+    repetidas,
+  }
+}
+
+function SummaryRow({
+  stats,
+  onTap,
+}: {
+  stats: SectionStats
+  onTap: () => void
+}) {
+  const pct = Math.round((stats.tidas / stats.total) * 100)
+  const isComplete = stats.tidas === stats.total
+
+  return (
+    <li>
+      <button
+        onClick={onTap}
+        className="glass-card flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition active:scale-[0.99] hover:bg-navy-surface-3/60"
+      >
+        <span className="text-xl leading-none shrink-0">{stats.flag}</span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="truncate text-sm font-semibold text-on-surface">
+              {stats.label}
+            </span>
+            <span className="ml-auto shrink-0 font-mono text-xs tabular-nums text-on-surface-variant">
+              {stats.tidas}/{stats.total}
+            </span>
+          </div>
+
+          {/* progress bar */}
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-navy-surface-lowest">
+            <div
+              className={`h-full transition-all ${
+                isComplete ? 'bg-trophy-gold' : 'bg-fifa-pitch-gradient'
+              }`}
+              style={{ width: `${Math.max(pct, 2)}%` }}
+            />
+          </div>
+
+          <div className="mt-1 flex items-center gap-3 text-[11px]">
+            {isComplete ? (
+              <span className="font-semibold text-trophy-gold">✓ completa</span>
+            ) : (
+              <>
+                <span className="text-on-surface-variant">
+                  <span className="text-fifa-blue-soft">{stats.faltantes}</span> faltam
+                </span>
+                {stats.repetidas > 0 && (
+                  <span className="text-on-surface-variant">
+                    <span className="text-trophy-gold">{stats.repetidas}</span> rep
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        <span className="text-on-surface-variant/40 text-sm">→</span>
+      </button>
+    </li>
+  )
+}
+
 export default function Collection() {
   const { byId, loading } = useCollection()
-  const [filter, setFilter] = useState<Filter>('all')
+  const [filter, setFilter] = useState<Filter>('summary')
   const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set())
 
   const list = useMemo(() => {
+    if (filter === 'summary') return [] // Resumo não usa lista de figurinhas
     return ALL_STICKERS.filter((s) => {
       // Multi-filtro de seção: vazio = tudo. Cada item escolhido é um OR.
       if (selectedSections.size > 0) {
@@ -58,30 +211,43 @@ export default function Collection() {
       }
 
       const owned = byId.get(s.id)
-      if (filter === 'owned') return !!owned
       if (filter === 'missing') return !owned
       if (filter === 'duplicates') return !!owned && owned.count > 1
       return true
     })
   }, [byId, filter, selectedSections])
 
+  function focusOnSection(code: string) {
+    setSelectedSections(new Set([code]))
+    setFilter('all')
+  }
+
   return (
     <div className="space-y-3">
       <FilterBar filter={filter} setFilter={setFilter} />
-      <SectionMultiFilter
-        selected={selectedSections}
-        onChange={setSelectedSections}
-      />
 
-      <div className="text-xs text-on-surface-variant/70">
-        {loading ? 'Carregando…' : `${list.length} figurinhas`}
-      </div>
+      {filter !== 'summary' && (
+        <>
+          <SectionMultiFilter
+            selected={selectedSections}
+            onChange={setSelectedSections}
+          />
 
-      <ul className="space-y-1.5">
-        {list.map((s) => (
-          <StickerRow key={s.id} sticker={s} count={byId.get(s.id)?.count ?? 0} />
-        ))}
-      </ul>
+          <div className="text-xs text-on-surface-variant/70">
+            {loading ? 'Carregando…' : `${list.length} figurinhas`}
+          </div>
+
+          <ul className="space-y-1.5">
+            {list.map((s) => (
+              <StickerRow key={s.id} sticker={s} count={byId.get(s.id)?.count ?? 0} />
+            ))}
+          </ul>
+        </>
+      )}
+
+      {filter === 'summary' && (
+        <SummaryView byId={byId} loading={loading} onSectionTap={focusOnSection} />
+      )}
     </div>
   )
 }
@@ -94,8 +260,8 @@ function FilterBar({
   setFilter: (f: Filter) => void
 }) {
   const tabs: { key: Filter; label: string }[] = [
+    { key: 'summary', label: 'Resumo' },
     { key: 'all', label: 'Todas' },
-    { key: 'owned', label: 'Tidas' },
     { key: 'missing', label: 'Faltantes' },
     { key: 'duplicates', label: 'Repetidas' },
   ]
