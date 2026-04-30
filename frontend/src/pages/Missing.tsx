@@ -94,9 +94,14 @@ export default function Missing() {
 
       {/* Cabeçalho da impressão */}
       <header className="print-header">
-        <h1 className="text-xl font-bold text-on-surface print:text-black">
-          Álbum Copa 2026 — Faltantes
-        </h1>
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-xl font-bold text-on-surface print:text-black">
+            Álbum Copa 2026 — Faltantes
+          </h1>
+          <span className="text-xs font-mono text-on-surface-variant print:text-gray-600">
+            meualbum-copa2026.web.app
+          </span>
+        </div>
         <p className="text-sm text-on-surface-variant print:text-gray-700">
           {loading ? 'Carregando…' : `${stats.tidas} de ${ALBUM_TOTAL} tidas · ${stats.faltantes} faltantes`}
           <span className="mx-2">·</span>
@@ -190,7 +195,7 @@ export default function Missing() {
       {/* Rodapé impresso */}
       <footer className="print-footer hidden print:block">
         <p className="mt-4 text-[10px] text-gray-500">
-          Lista gerada por meualbum-copa2026.web.app — total: {ALL_STICKERS.length} figurinhas
+          Total no álbum: {ALL_STICKERS.length} figurinhas
         </p>
       </footer>
     </div>
